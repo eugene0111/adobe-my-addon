@@ -695,6 +695,165 @@ sp-textfield {
 .item-text {
     display: flex;
     flex-direction: column;
+    gap: 20px;
+    max-height: calc(100vh - 48px);
+    overflow-y: auto;
+}
+
+.header {
+    margin-bottom: 8px;
+}
+
+.title {
+    font-size: 24px;
+    font-weight: 600;
+    margin: 0 0 4px 0;
+    color: #1a1a1a;
+}
+
+.subtitle {
+    font-size: 14px;
+    color: #666;
+    margin: 0;
+}
+
+.actions-section {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.primary-button {
+    width: 100%;
+}
+
+.bulk-actions {
+    display: flex;
+    gap: 8px;
+}
+
+.fix-all-button {
+    flex: 1;
+}
+
+.violations-section {
+    margin-top: 8px;
+}
+
+.section-title {
+    font-size: 16px;
+    font-weight: 600;
+    margin: 0 0 12px 0;
+    color: #1a1a1a;
+}
+
+.violations-list {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.violation-item {
+    border: 1px solid #e0e0e0;
+    border-left: 4px solid #ff8800;
+    border-radius: 8px;
+    padding: 12px;
+    background: #fafafa;
+    transition: background-color 0.2s;
+}
+
+.violation-item:hover {
+    background: #f5f5f5;
+}
+
+.violation-header {
+    display: flex;
+    gap: 12px;
+    margin-bottom: 12px;
+}
+
+.violation-icon {
+    font-size: 24px;
+    flex-shrink: 0;
+}
+
+.violation-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.violation-type {
+    font-size: 14px;
+    font-weight: 600;
+    color: #1a1a1a;
+    text-transform: capitalize;
+    margin-bottom: 4px;
+}
+
+.violation-message {
+    font-size: 13px;
+    color: #666;
+    margin-bottom: 4px;
+}
+
+.violation-element {
+    font-size: 12px;
+    color: #999;
+    font-family: monospace;
+}
+
+.violation-actions {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.fix-button,
+.fix-similar-button {
+    flex: 1;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 32px 16px;
+    color: #666;
+    font-size: 14px;
+}
+
+.tools-section {
+    margin-top: 8px;
+    padding-top: 16px;
+    border-top: 1px solid #e0e0e0;
+}
+
+.tools-buttons {
+    display: flex;
+    gap: 8px;
+}
+
+.tool-button {
+    flex: 1;
+}
+
+/* Scrollbar styling */
+.violations-list::-webkit-scrollbar {
+    width: 8px;
+}
+
+.violations-list::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 4px;
+}
+
+.violations-list::-webkit-scrollbar-thumb {
+    background: #ccc;
+    border-radius: 4px;
+}
+
+.violations-list::-webkit-scrollbar-thumb:hover {
+    background: #999;
 }
 
 .item-title {

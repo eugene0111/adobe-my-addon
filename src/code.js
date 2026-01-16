@@ -9,17 +9,109 @@ import { editor, fonts, colorUtils } from "express-document-sdk";
 import { createFixExecutor } from "./services/fixExecutor.js";
 import { createEnhancementTools } from "./services/enhancementTools.js";
 import { MOCK_BRAND_PROFILE } from "./utils/mockData.js";
+import { extractDocumentData } from "./utils/documentExtractor.js";
 
 const { runtime } = addOnSandboxSdk.instance;
 
-// Helper to find node by ID (you'll need to implement based on how Person B provides IDs)
+/**
+ * Find a node by element ID
+ * Traverses the document tree to find the node with matching ID
+ * @param {string} elementId - The element ID to search for
+ * @returns {Object|null} The found node or null
+ */
 function findNodeById(elementId) {
-  // TODO: Implement node lookup
-  // This depends on how element_id is structured
-  // For now, return selected element or traverse document
-  return editor.context.insertionParent?.children?.find(
-    child => child.id === elementId
-  );
+  if (!elementId) {
+    return null;
+  }
+
+  const document = editor.document;
+  if (!document) {
+    return null;
+  }
+
+  // Helper function to recursively search through nodes
+  function searchNode(node, targetId) {
+    // Check if current node matches
+    if (node.id === targetId || node.guid === targetId) {
+      return node;
+    }
+
+    // Check children if they exist
+    if (node.children && Array.isArray(node.children)) {
+      for (const child of node.children) {
+        const found = searchNode(child, targetId);
+        if (found) {
+          return found;
+        }
+      }
+    }
+
+    // Check if node has a content property with children
+    if (node.content && node.content.children) {
+      for (const child of node.content.children) {
+        const found = searchNode(child, targetId);
+        if (found) {
+          return found;
+        }
+      }
+    }
+
+    return null;
+  }
+
+  // Start search from document root
+  if (document.root) {
+    const found = searchNode(document.root, elementId);
+    if (found) {
+      return found;
+    }
+  }
+
+  // Also check insertion parent and its children (common case)
+  const insertionParent = editor.context.insertionParent;
+  if (insertionParent) {
+    // Check insertion parent itself
+    if (insertionParent.id === elementId || insertionParent.guid === elementId) {
+      return insertionParent;
+    }
+
+    // Check insertion parent's children
+    if (insertionParent.children) {
+      for (const child of insertionParent.children) {
+        const found = searchNode(child, elementId);
+        if (found) {
+          return found;
+        }
+      }
+    }
+  }
+
+  // Check selected elements (user might have selected the element)
+  const selection = editor.context.selection;
+  if (selection && selection.length > 0) {
+    for (const selectedNode of selection) {
+      if (selectedNode.id === elementId || selectedNode.guid === elementId) {
+        return selectedNode;
+      }
+      // Also search in selected node's children
+      const found = searchNode(selectedNode, elementId);
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  // Last resort: traverse all pages if document has pages
+  if (document.pages && Array.isArray(document.pages)) {
+    for (const page of document.pages) {
+      const found = searchNode(page, elementId);
+      if (found) {
+        return found;
+      }
+    }
+  }
+
+  return null;
 }
 
 // Initialize fix executor
@@ -39,26 +131,146 @@ const { addTexture, applyGradient, enhanceBackground } = createEnhancementTools(
 
 // Expose APIs that UI can call via apiProxy
 runtime.exposeApi({
+  /**
+   * Extract document data for validation
+   * @returns {Promise<Object>} Document data in backend format
+   */
+  async extractDocumentData() {
+    try {
+      return await extractDocumentData(editor);
+    } catch (error) {
+      console.error("[Document Sandbox] Error extracting document data:", error);
+      return {
+        elements: [],
+        error: error.message
+      };
+    }
+  },
+
+  /**
+   * Execute a single fix action
+   * @param {Object} fixAction - The fix action to execute
+   * @returns {Promise<Object>} Result with success status
+   */
   async executeFix(fixAction) {
-    return await applyFix(fixAction);
+    try {
+      return await applyFix(fixAction);
+    } catch (error) {
+      console.error("[Document Sandbox] Error executing fix:", error);
+      return {
+        success: false,
+        action: fixAction,
+        error: error.message
+      };
+    }
   },
 
+  /**
+   * Execute multiple fix actions
+   * @param {Array} fixActions - Array of fix actions
+   * @returns {Promise<Array>} Results for each action
+   */
   async executeBulkFixes(fixActions) {
-    return await applyBulkFixes(fixActions);
+    try {
+      if (!Array.isArray(fixActions) || fixActions.length === 0) {
+        return [];
+      }
+      return await applyBulkFixes(fixActions);
+    } catch (error) {
+      console.error("[Document Sandbox] Error executing bulk fixes:", error);
+      return fixActions.map(action => ({
+        success: false,
+        action,
+        error: error.message
+      }));
+    }
   },
 
+  /**
+   * Add texture to an element
+   * @param {string} elementId - Element ID (null for selected element)
+   * @param {string} textureType - Texture type (subtle, bold, etc.)
+   * @returns {Promise<Object>} Result with success status
+   */
   async addBrandTexture(elementId, textureType) {
-    return await addTexture(elementId, MOCK_BRAND_PROFILE, textureType);
+    try {
+      // If elementId is null, try to get selected element
+      let targetElementId = elementId;
+      if (!targetElementId) {
+        const selection = editor.context.selection;
+        if (selection && selection.length > 0) {
+          targetElementId = selection[0].id || selection[0].guid;
+        }
+      }
+
+      if (!targetElementId) {
+        return {
+          success: false,
+          error: "No element selected and no elementId provided"
+        };
+      }
+
+      return await addTexture(targetElementId, MOCK_BRAND_PROFILE, textureType);
+    } catch (error) {
+      console.error("[Document Sandbox] Error adding texture:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   },
 
+  /**
+   * Apply gradient to an element
+   * @param {string} elementId - Element ID (null for selected element)
+   * @param {string} gradientType - Gradient type (linear, radial, conic)
+   * @returns {Promise<Object>} Result with success status
+   */
   async applyBrandGradient(elementId, gradientType) {
-    return await applyGradient(elementId, MOCK_BRAND_PROFILE, gradientType);
+    try {
+      // If elementId is null, try to get selected element
+      let targetElementId = elementId;
+      if (!targetElementId) {
+        const selection = editor.context.selection;
+        if (selection && selection.length > 0) {
+          targetElementId = selection[0].id || selection[0].guid;
+        }
+      }
+
+      if (!targetElementId) {
+        return {
+          success: false,
+          error: "No element selected and no elementId provided"
+        };
+      }
+
+      return await applyGradient(targetElementId, MOCK_BRAND_PROFILE, {
+        type: gradientType || 'linear'
+      });
+    } catch (error) {
+      console.error("[Document Sandbox] Error applying gradient:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   },
 
-  // Test function - call from console or UI
+  /**
+   * Test function - call from console or UI
+   * Tests the fix executor with mock data
+   */
   async testFixExecutor() {
-    const { MOCK_FIX_ACTIONS } = await import("./utils/mockData.js");
-    console.log("[Document Sandbox] Testing fix executor with mock data...");
-    return await applyBulkFixes(MOCK_FIX_ACTIONS);
+    try {
+      const { MOCK_FIX_ACTIONS } = await import("./utils/mockData.js");
+      console.log("[Document Sandbox] Testing fix executor with mock data...");
+      return await applyBulkFixes(MOCK_FIX_ACTIONS);
+    } catch (error) {
+      console.error("[Document Sandbox] Error in test:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
   }
 });
