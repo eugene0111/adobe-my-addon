@@ -329,7 +329,55 @@ runtime.exposeApi({
    */
   async scanForBrandViolations(brandProfile) {
     try {
-      console.log("[Document Sandbox] Starting scan...");
+      console.log("[Document Sandbox] ========================================");
+      console.log("[Document Sandbox] STARTING BRAND VIOLATION SCAN");
+      console.log("[Document Sandbox] ========================================");
+      
+      // Log editor and document structure
+      console.log("[Document Sandbox] Editor structure:", {
+        hasEditor: !!editor,
+        hasDocument: !!editor?.document,
+        hasContext: !!editor?.context,
+        hasSelection: !!(editor?.context?.selection),
+        selectionCount: editor?.context?.selection?.length || 0,
+        hasInsertionParent: !!editor?.context?.insertionParent
+      });
+      
+      if (editor?.document) {
+        const doc = editor.document;
+        console.log("[Document Sandbox] Document structure:", {
+          hasRoot: !!doc.root,
+          rootType: doc.root?.type,
+          rootId: doc.root?.id || doc.root?.guid,
+          hasPages: !!doc.pages,
+          pagesCount: doc.pages?.length || 0,
+          documentKeys: Object.keys(doc)
+        });
+        
+        // Log root node details if available
+        if (doc.root) {
+          console.log("[Document Sandbox] Root node:", {
+            id: doc.root.id || doc.root.guid,
+            type: doc.root.type,
+            hasChildren: !!(doc.root.children && doc.root.children.length > 0),
+            childrenCount: doc.root.children?.length || 0,
+            rootKeys: Object.keys(doc.root).slice(0, 15)
+          });
+        }
+        
+        // Log pages if available
+        if (doc.pages && Array.isArray(doc.pages)) {
+          console.log(`[Document Sandbox] Found ${doc.pages.length} pages`);
+          doc.pages.forEach((page, idx) => {
+            console.log(`[Document Sandbox] Page ${idx + 1}:`, {
+              id: page.id || page.guid,
+              type: page.type,
+              hasChildren: !!(page.children && page.children.length > 0),
+              childrenCount: page.children?.length || 0
+            });
+          });
+        }
+      }
       
       if (!brandProfile) {
         console.warn("[Document Sandbox] No brand profile provided, using mock profile");
@@ -338,13 +386,14 @@ runtime.exposeApi({
       }
 
       // Extract document data
-      console.log("[Document Sandbox] Extracting document data...");
+      console.log("[Document Sandbox] Calling extractDocumentData...");
       const documentData = await extractDocumentData(editor);
       
-      console.log("[Document Sandbox] Extracted document data:", {
-        elementsCount: documentData?.elements?.length || 0,
-        hasDocument: !!editor.document
-      });
+      console.log("[Document Sandbox] ========================================");
+      console.log("[Document Sandbox] EXTRACTION RESULTS");
+      console.log("[Document Sandbox] ========================================");
+      console.log("[Document Sandbox] Elements count:", documentData?.elements?.length || 0);
+      console.log("[Document Sandbox] Full document data:", documentData);
       
       if (!documentData || !documentData.elements || documentData.elements.length === 0) {
         console.warn("[Document Sandbox] No elements found in document");
@@ -356,6 +405,12 @@ runtime.exposeApi({
         };
       }
 
+      // Log final result
+      console.log("[Document Sandbox] ========================================");
+      console.log("[Document Sandbox] SCAN COMPLETE");
+      console.log("[Document Sandbox] Ready for validation:", true);
+      console.log("[Document Sandbox] ========================================");
+      
       // Return document data for UI to validate (UI has better network access)
       return {
         documentData,
