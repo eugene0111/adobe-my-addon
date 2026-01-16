@@ -22,6 +22,11 @@ module.exports = {
     },
     externalsType: "module",
     externalsPresets: { web: true },
+    externals: {
+        // Adobe Express SDK modules are provided by the runtime environment
+        "add-on-sdk-document-sandbox": "add-on-sdk-document-sandbox",
+        "express-document-sdk": "express-document-sdk"
+    },
     plugins: [
         new HtmlWebpackPlugin({
             template: "src/index.html",

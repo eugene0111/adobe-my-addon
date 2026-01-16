@@ -2,8 +2,8 @@ import "@spectrum-web-components/theme/express/scale-medium.js";
 import "@spectrum-web-components/theme/express/theme-light.js";
 import { Button } from "@swc-react/button";
 import { Theme } from "@swc-react/theme";
-import React, { useState, useCallback } from "react";
-import { validateDesign, planFixes } from "../services/api.js";
+import React, { useState, useCallback, useEffect } from "react";
+import { validateDesign, planFixes, generateBrandProfile } from "../services/api.js";
 import { MOCK_BRAND_PROFILE } from "../utils/mockData.js";
 import { ToastContainer } from "./Toast";
 import "./App.css";
@@ -16,7 +16,18 @@ const App = ({ addOnUISdk }) => {
     const [fixing, setFixing] = useState(false);
     const [selectedViolations, setSelectedViolations] = useState(new Set());
     const [toasts, setToasts] = useState([]);
-    const [brandProfile] = useState(MOCK_BRAND_PROFILE); // In production, this would come from user input or storage
+    
+    // Brand Profile Management
+    const [brandProfile, setBrandProfile] = useState(() => {
+        // Load from localStorage on mount
+        const saved = localStorage.getItem('brand_profile');
+        return saved ? JSON.parse(saved) : MOCK_BRAND_PROFILE;
+    });
+    const [showBrandProfileForm, setShowBrandProfileForm] = useState(false);
+    const [brandStatement, setBrandStatement] = useState('');
+    const [format, setFormat] = useState('instagram_post');
+    const [generatingProfile, setGeneratingProfile] = useState(false);
+    
     const [hasChecked, setHasChecked] = useState(false); // Track if user has run a check
     const [error, setError] = useState(null);
 
@@ -42,6 +53,52 @@ const App = ({ addOnUISdk }) => {
 
     const removeToast = useCallback((id) => {
         setToasts(prev => prev.filter(toast => toast.id !== id));
+    }, []);
+
+    // Brand Profile Generation
+    const handleGenerateBrandProfile = useCallback(async () => {
+        if (!brandStatement.trim()) {
+            addToast('Please enter a brand description', 'warning');
+            return;
+        }
+
+        setGeneratingProfile(true);
+        addToast('Generating brand profile...', 'info');
+
+        try {
+            const result = await generateBrandProfile(brandStatement.trim(), format);
+            
+            if (result.success && result.brand_profile) {
+                setBrandProfile(result.brand_profile);
+                // Save to localStorage
+                localStorage.setItem('brand_profile', JSON.stringify(result.brand_profile));
+                localStorage.setItem('brand_statement', brandStatement.trim());
+                localStorage.setItem('brand_format', format);
+                
+                setShowBrandProfileForm(false);
+                setBrandStatement('');
+                addToast('Brand profile generated successfully!', 'success');
+            } else {
+                addToast('Failed to generate brand profile', 'error');
+            }
+        } catch (error) {
+            console.error('Error generating brand profile:', error);
+            addToast(`Error: ${error.message || 'Failed to generate brand profile'}`, 'error');
+        } finally {
+            setGeneratingProfile(false);
+        }
+    }, [brandStatement, format, addToast]);
+
+    // Load saved brand statement on mount
+    useEffect(() => {
+        const savedStatement = localStorage.getItem('brand_statement');
+        const savedFormat = localStorage.getItem('brand_format');
+        if (savedStatement) {
+            setBrandStatement(savedStatement);
+        }
+        if (savedFormat) {
+            setFormat(savedFormat);
+        }
     }, []);
 
     // Extract document data and validate
@@ -276,6 +333,67 @@ const App = ({ addOnUISdk }) => {
                 <div className="header">
                     <h2 className="title">BrandGuard</h2>
                     <p className="subtitle">Brand Consistency Assistant</p>
+                </div>
+
+                {/* Brand Profile Section */}
+                <div className="brand-profile-section">
+                    <div className="brand-profile-header">
+                        <h3 className="section-title">Brand Profile</h3>
+                        <Button 
+                            size="s" 
+                            onClick={() => setShowBrandProfileForm(!showBrandProfileForm)}
+                            className="toggle-button"
+                        >
+                            {showBrandProfileForm ? 'Cancel' : 'Create/Edit Profile'}
+                        </Button>
+                    </div>
+
+                    {showBrandProfileForm ? (
+                        <div className="brand-profile-form">
+                            <div className="form-group">
+                                <label htmlFor="brand-statement">Brand Description</label>
+                                <textarea
+                                    id="brand-statement"
+                                    className="brand-textarea"
+                                    value={brandStatement}
+                                    onChange={(e) => setBrandStatement(e.target.value)}
+                                    placeholder="Describe your brand (e.g., 'Modern fintech startup for Gen Z')"
+                                    rows={3}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label htmlFor="format">Design Format</label>
+                                <select
+                                    id="format"
+                                    className="brand-select"
+                                    value={format}
+                                    onChange={(e) => setFormat(e.target.value)}
+                                >
+                                    <option value="instagram_post">Instagram Post</option>
+                                    <option value="poster">Poster</option>
+                                    <option value="story">Story</option>
+                                    <option value="banner">Banner</option>
+                                    <option value="flyer">Flyer</option>
+                                </select>
+                            </div>
+                            <Button 
+                                size="m" 
+                                onClick={handleGenerateBrandProfile}
+                                disabled={generatingProfile || !brandStatement.trim()}
+                                className="generate-button"
+                            >
+                                {generatingProfile ? 'Generating...' : 'Generate Brand Profile'}
+                            </Button>
+                        </div>
+                    ) : (
+                        <div className="brand-profile-display">
+                            <p className="brand-profile-info">
+                                {localStorage.getItem('brand_statement') 
+                                    ? `Current: "${localStorage.getItem('brand_statement')}"`
+                                    : 'Using default brand profile. Create a new one to get started.'}
+                            </p>
+                        </div>
+                    )}
                 </div>
 
                 <div className="actions-section">
