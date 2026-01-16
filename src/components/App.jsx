@@ -9,12 +9,30 @@ import { ToastContainer } from "./Toast";
 import "./App.css";
 
 const App = ({ addOnUISdk }) => {
+    console.log('[App] Component rendering, addOnUISdk:', addOnUISdk ? 'present' : 'missing');
+    
     const [violations, setViolations] = useState([]);
     const [loading, setLoading] = useState(false);
     const [fixing, setFixing] = useState(false);
     const [selectedViolations, setSelectedViolations] = useState(new Set());
     const [toasts, setToasts] = useState([]);
     const [brandProfile] = useState(MOCK_BRAND_PROFILE); // In production, this would come from user input or storage
+    const [hasChecked, setHasChecked] = useState(false); // Track if user has run a check
+    const [error, setError] = useState(null);
+
+    // Check if addOnUISdk is available
+    if (!addOnUISdk) {
+        console.warn('[App] addOnUISdk not provided');
+        return (
+            <Theme system="express" scale="medium" color="light">
+                <div className="container">
+                    <div className="error-state">
+                        <p>Error: Adobe Express SDK not initialized</p>
+                    </div>
+                </div>
+            </Theme>
+        );
+    }
 
     // Toast management
     const addToast = useCallback((message, type = 'info', duration = 3000) => {
@@ -29,6 +47,8 @@ const App = ({ addOnUISdk }) => {
     // Extract document data and validate
     const handleCheckBrandConsistency = useCallback(async () => {
         setLoading(true);
+        setError(null);
+        setHasChecked(true);
         addToast('Extracting document data...', 'info');
 
         try {
@@ -55,11 +75,15 @@ const App = ({ addOnUISdk }) => {
                     addToast(`Found ${count} violation${count !== 1 ? 's' : ''}`, count > 0 ? 'warning' : 'success');
                 }
             } else {
-                addToast('Validation failed: ' + (result.message || 'Unknown error'), 'error');
+                const errorMsg = result.message || 'Unknown error';
+                setError(errorMsg);
+                addToast('Validation failed: ' + errorMsg, 'error');
             }
         } catch (error) {
             console.error('Error checking brand consistency:', error);
-            addToast(`Error: ${error.message || 'Failed to validate design'}`, 'error');
+            const errorMsg = error.message || 'Failed to validate design';
+            setError(errorMsg);
+            addToast(`Error: ${errorMsg}`, 'error');
         } finally {
             setLoading(false);
         }
@@ -325,9 +349,23 @@ const App = ({ addOnUISdk }) => {
                     </div>
                 )}
 
-                {violations.length === 0 && !loading && (
+                {violations.length === 0 && !loading && hasChecked && !error && (
                     <div className="empty-state">
                         <p>No violations found. Your design is brand-consistent! 🎉</p>
+                    </div>
+                )}
+
+                {!hasChecked && !loading && (
+                    <div className="welcome-state">
+                        <p>Welcome to BrandGuard! 👋</p>
+                        <p className="welcome-subtitle">Click "Check Brand Consistency" to analyze your design against your brand profile.</p>
+                    </div>
+                )}
+
+                {error && (
+                    <div className="error-state">
+                        <p>⚠️ Error: {error}</p>
+                        <p className="error-subtitle">Please check your backend connection and try again.</p>
                     </div>
                 )}
 
@@ -349,7 +387,7 @@ const App = ({ addOnUISdk }) => {
                             className="tool-button"
                         >
                             Add Texture
-                        </Button>
+                </Button>
                     </div>
                 </div>
 
