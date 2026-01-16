@@ -1,6 +1,6 @@
 import React from "react";
 
-const IssueList = ({ issues }) => {
+const IssueList = ({ issues, onFixIssue, onDismissIssue }) => {
     return (
         <div className="suggestion-feed-list">
             {issues.map((issue, index) => (
@@ -18,13 +18,13 @@ const IssueList = ({ issues }) => {
                     <div className="suggestion-footer">
                         <button 
                             className="single-fix-link" 
-                            onClick={() => console.log("Applying fix for:", issue.type)}
+                            onClick={() => onFixIssue && onFixIssue(issue)}
                         >
                             Accept
                         </button>
                         <button 
                             className="dismiss-link" 
-                            onClick={() => console.log("Dismissing suggestion")}
+                            onClick={() => onDismissIssue && onDismissIssue(issue, index)}
                         >
                             Ignore
                         </button>

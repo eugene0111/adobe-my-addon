@@ -319,5 +319,125 @@ runtime.exposeApi({
         error: error.message
       };
     }
+  },
+
+  /**
+   * Scan document for brand violations
+   * Extracts document data and returns it for UI to validate
+   * @param {Object} brandProfile - Brand profile to validate against (for reference)
+   * @returns {Promise<Object>} Document data ready for validation
+   */
+  async scanForBrandViolations(brandProfile) {
+    try {
+      console.log("[Document Sandbox] Starting scan...");
+      
+      if (!brandProfile) {
+        console.warn("[Document Sandbox] No brand profile provided, using mock profile");
+        const { MOCK_BRAND_PROFILE } = await import("./utils/mockData.js");
+        brandProfile = MOCK_BRAND_PROFILE;
+      }
+
+      // Extract document data
+      console.log("[Document Sandbox] Extracting document data...");
+      const documentData = await extractDocumentData(editor);
+      
+      console.log("[Document Sandbox] Extracted document data:", {
+        elementsCount: documentData?.elements?.length || 0,
+        hasDocument: !!editor.document
+      });
+      
+      if (!documentData || !documentData.elements || documentData.elements.length === 0) {
+        console.warn("[Document Sandbox] No elements found in document");
+        // Return empty result but with metadata
+        return {
+          documentData: { elements: [] },
+          brandProfile,
+          error: "No elements found in document"
+        };
+      }
+
+      // Return document data for UI to validate (UI has better network access)
+      return {
+        documentData,
+        brandProfile,
+        ready: true
+      };
+    } catch (error) {
+      console.error("[Document Sandbox] Error extracting document data:", error);
+      console.error("[Document Sandbox] Error stack:", error.stack);
+      return {
+        documentData: { elements: [] },
+        brandProfile: brandProfile || null,
+        error: error.message,
+        ready: false
+      };
+    }
+  },
+
+  /**
+   * Fix violations by planning fixes and executing them
+   * @param {Array} violations - Array of violation objects
+   * @param {Object} brandProfile - Brand profile to use for fixing
+   * @param {Object} options - Options for fix planning (fixAllSimilar, selectedViolations)
+   * @returns {Promise<Object>} Results of fix execution
+   */
+  async fixViolations(violations, brandProfile, options = {}) {
+    try {
+      if (!violations || violations.length === 0) {
+        return { success: true, fixed: 0, failed: 0 };
+      }
+
+      if (!brandProfile) {
+        console.warn("[Document Sandbox] No brand profile provided, using mock profile");
+        const { MOCK_BRAND_PROFILE } = await import("./utils/mockData.js");
+        brandProfile = MOCK_BRAND_PROFILE;
+      }
+
+      // Call backend to plan fixes
+      const { planFixes, executeFixes } = await import("./services/api.js");
+      const planResponse = await planFixes(violations, brandProfile, options);
+
+      if (!planResponse.success || !planResponse.fix_plan || !planResponse.fix_plan.actions) {
+        console.error("[Document Sandbox] Fix planning failed:", planResponse);
+        return {
+          success: false,
+          error: planResponse.message || "Fix planning failed",
+          fixed: 0,
+          failed: violations.length
+        };
+      }
+
+      const actions = planResponse.fix_plan.actions;
+      console.log("[Document Sandbox] Executing fixes:", actions.length, "actions");
+
+      // Execute fixes in the document
+      const executionResults = await applyBulkFixes(actions);
+
+      // Call backend executeFixes for validation/record keeping
+      try {
+        await executeFixes(actions);
+      } catch (backendError) {
+        console.warn("[Document Sandbox] Backend executeFixes failed (non-critical):", backendError);
+      }
+
+      const successful = executionResults.filter(r => r.success).length;
+      const failed = executionResults.filter(r => !r.success).length;
+
+      return {
+        success: true,
+        fixed: successful,
+        failed: failed,
+        total: actions.length,
+        results: executionResults
+      };
+    } catch (error) {
+      console.error("[Document Sandbox] Error fixing violations:", error);
+      return {
+        success: false,
+        error: error.message,
+        fixed: 0,
+        failed: violations.length
+      };
+    }
   }
 });

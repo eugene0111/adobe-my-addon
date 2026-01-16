@@ -16,6 +16,8 @@ class ApiError extends Error {
 
 async function apiRequest(endpoint, options = {}) {
   const url = `${BACKEND_URL}${endpoint}`;
+  console.log(`[API] Making request to: ${url}`, { endpoint, body: options.body });
+  
   const config = {
     ...options,
     headers: {
@@ -30,25 +32,48 @@ async function apiRequest(endpoint, options = {}) {
 
   try {
     const response = await fetch(url, config);
-    const data = await response.json();
+    
+    // Handle non-JSON responses
+    let data;
+    const contentType = response.headers.get('content-type');
+    if (contentType && contentType.includes('application/json')) {
+      data = await response.json();
+    } else {
+      const text = await response.text();
+      throw new ApiError(
+        `Expected JSON but got: ${contentType || 'unknown'}. Response: ${text.substring(0, 200)}`,
+        response.status,
+        { text }
+      );
+    }
 
     if (!response.ok) {
+      console.error(`[API] Request failed: ${response.status}`, data);
       throw new ApiError(
-        data.message || `HTTP ${response.status}`,
+        data.message || data.error || `HTTP ${response.status}`,
         response.status,
         data
       );
     }
 
+    console.log(`[API] Request successful: ${url}`);
     return data;
   } catch (error) {
     if (error instanceof ApiError) {
       throw error;
     }
+    
+    // Provide more helpful error messages
+    let errorMessage = error.message;
+    if (error.message === 'Failed to fetch' || error.message.includes('fetch')) {
+      errorMessage = `Cannot connect to backend at ${BACKEND_URL}. Make sure the server is running.`;
+    }
+    
+    console.error(`[API] Request error: ${url}`, error);
     throw new ApiError(
-      `Network error: ${error.message}`,
+      errorMessage,
       0,
-      { originalError: error.message }
+      { originalError: error.message, url, endpoint }
     );
   }
 }

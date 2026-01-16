@@ -6,8 +6,9 @@ import Wishlist from "./Wishlist"; // Import the new component
 import { StatusLight } from "@swc-react/status-light";
 import { Divider } from "@swc-react/divider";
 import { Textfield } from "@swc-react/textfield";
+import { generateBrandProfile } from "../services/api.js";
 
-const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView }) => {
+const MainLinterUI = ({ issues, setIssues, isScanning, onScan, onFix, setView, brandProfile, setBrandProfile }) => {
     // --- State Management ---
     const [viewMode, setViewMode] = useState("dashboard"); // "dashboard" or "wishlist"
     const [prompt, setPrompt] = useState("");
@@ -23,9 +24,71 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView }) => {
 
     // --- Handlers ---
     const handleGenerateBrand = async () => {
+        if (!prompt.trim()) {
+            return;
+        }
+
         setIsGenerating(true);
         setShowSuggestions(true);
-        setTimeout(() => {
+
+        try {
+            // Call backend API to generate brand profile
+            const response = await generateBrandProfile(prompt.trim(), 'instagram_post');
+            
+            if (response.success && response.brand_profile) {
+                const profile = response.brand_profile;
+                
+                // Transform brand profile into suggested assets format
+                const assets = [];
+                
+                // Create color palette asset
+                if (profile.colors) {
+                    assets.push({
+                        id: 'color-palette',
+                        name: `${profile.brand_name || 'Generated'} Palette`,
+                        colors: [
+                            profile.colors.primary,
+                            profile.colors.secondary,
+                            profile.colors.accent,
+                            profile.colors.background,
+                            profile.colors.text
+                        ].filter(Boolean)
+                    });
+                }
+                
+                // Create font asset
+                if (profile.fonts) {
+                    assets.push({
+                        id: 'font-palette',
+                        name: `${profile.fonts.heading} & ${profile.fonts.body}`,
+                        font: `${profile.fonts.heading} / ${profile.fonts.body}`,
+                        fontFamily: profile.fonts.heading
+                    });
+                }
+
+                // Add the generated profile as an asset
+                assets.push({
+                    id: 'complete-profile',
+                    name: 'Complete Brand Profile',
+                    profile: profile,
+                    isComplete: true
+                });
+
+                setSuggestedAssets(assets);
+            } else {
+                console.error("Brand generation failed:", response);
+                // Fallback to mock assets on error
+                const mockAssets = [
+                    { id: 1, name: "Vibrant Tech", colors: ["#6366f1", "#a855f7", "#ec4899"] },
+                    { id: 2, name: "Modern Sans", font: "Inter ExtraBold" },
+                    { id: 3, name: "Deep Marine", colors: ["#0f172a", "#334155", "#94a3b8"] },
+                    { id: 4, name: "Eco Leaf", colors: ["#059669", "#10b981", "#6ee7b7"] }
+                ];
+                setSuggestedAssets(mockAssets);
+            }
+        } catch (error) {
+            console.error("Error generating brand:", error);
+            // Fallback to mock assets on error
             const mockAssets = [
                 { id: 1, name: "Vibrant Tech", colors: ["#6366f1", "#a855f7", "#ec4899"] },
                 { id: 2, name: "Modern Sans", font: "Inter ExtraBold" },
@@ -33,14 +96,27 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView }) => {
                 { id: 4, name: "Eco Leaf", colors: ["#059669", "#10b981", "#6ee7b7"] }
             ];
             setSuggestedAssets(mockAssets);
-            setIsGenerating(false);
-        }, 1500);
+        }
+
+        setIsGenerating(false);
     };
 
     const handleSelectAsset = (asset) => {
         console.log("Applying style:", asset);
+        
+        // If it's a complete profile, update the brand profile
+        if (asset.isComplete && asset.profile && setBrandProfile) {
+            setBrandProfile(asset.profile);
+            // Clear the prompt after applying
+            setPrompt("");
+            setShowSuggestions(false);
+        }
+        
         setViewMode("dashboard"); // Switch back to dashboard if applied from wishlist
-        onScan(); 
+        // Re-scan with new brand profile
+        setTimeout(() => {
+            onScan();
+        }, 100);
     };
 
     const handleWishlistToggle = (asset) => {
@@ -51,6 +127,28 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView }) => {
             }
             return [...prev, asset]; // Add
         });
+    };
+
+    const handleFixIssue = async (issue) => {
+        try {
+            // Fix a single issue - call the fix function with just this issue
+            if (onFix) {
+                await onFix();
+                // The onFix function will handle fixing all issues, 
+                // but we can also implement a single-issue fix here
+            }
+            // Re-scan to update issues list
+            await onScan();
+        } catch (error) {
+            console.error("Error fixing issue:", error);
+        }
+    };
+
+    const handleDismissIssue = (issue, index) => {
+        // Remove issue from the list (just UI, doesn't fix it)
+        if (setIssues) {
+            setIssues((prev) => prev.filter((_, i) => i !== index));
+        }
     };
 
     return (
@@ -134,7 +232,11 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView }) => {
                                     <p>Your design is perfectly on-brand!</p>
                                 </div>
                             ) : (
-                                <IssueList issues={issues} />
+                                <IssueList 
+                                    issues={issues} 
+                                    onFixIssue={handleFixIssue}
+                                    onDismissIssue={handleDismissIssue}
+                                />
                             )}
                         </div>
                     </>

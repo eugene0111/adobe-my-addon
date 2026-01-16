@@ -169,21 +169,41 @@ export async function extractDocumentData(editor) {
     }
   }
 
-  // Start traversal from document root
-  if (document.root) {
-    traverseNode(document.root, 0);
-  } else if (document.pages && Array.isArray(document.pages)) {
-    // If document has pages, traverse each page
-    document.pages.forEach((page, pageIndex) => {
-      traverseNode(page, elements.length);
+  // Prioritize selected elements if available
+  const selection = editor.context?.selection;
+  if (selection && selection.length > 0) {
+    console.log("[Document Extractor] Found selected elements:", selection.length);
+    selection.forEach((node, index) => {
+      const element = extractElementData(node, index);
+      elements.push(element);
+      // Also traverse children of selected nodes
+      if (node.children && Array.isArray(node.children)) {
+        node.children.forEach((child, childIndex) => {
+          traverseNode(child, elements.length + childIndex);
+        });
+      }
     });
-  } else {
-    // Fallback: check insertion parent
-    const insertionParent = editor.context.insertionParent;
-    if (insertionParent) {
-      traverseNode(insertionParent, 0);
+  }
+
+  // If no elements found yet, traverse document
+  if (elements.length === 0) {
+    // Start traversal from document root
+    if (document.root) {
+      traverseNode(document.root, 0);
+    } else if (document.pages && Array.isArray(document.pages)) {
+      // If document has pages, traverse each page
+      document.pages.forEach((page, pageIndex) => {
+        traverseNode(page, elements.length);
+      });
+    } else {
+      // Fallback: check insertion parent
+      const insertionParent = editor.context?.insertionParent;
+      if (insertionParent) {
+        traverseNode(insertionParent, 0);
+      }
     }
   }
 
+  console.log("[Document Extractor] Extracted", elements.length, "elements");
   return { elements };
 }
