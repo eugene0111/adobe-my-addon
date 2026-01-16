@@ -1,0 +1,21 @@
+{
+    "testId": "ed6f0c57-2897-4b0f-b7d0-186592f01f5f",
+    "name": "My Addon",
+    "version": "1.0.0",
+    "manifestVersion": 2,
+    "requirements": {
+        "apps": [
+            {
+                "name": "Express",
+                "apiVersion": 1
+            }
+        ]
+    },
+    "entryPoints": [
+        {
+            "type": "panel",
+            "id": "panel1",
+            "main": "index.html"
+        }
+    ]
+}
