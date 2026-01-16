@@ -45,31 +45,31 @@ const Welcome = ({ onStart, onLoginClick }) => {
                     ) : (
                         <div className="slide-content fade-in">
                             <h1 className="brand-title-small">
-                                Consistent sets for a gorgeous interface
+                            Design with total brand confidence
                             </h1>
                             
                             <div className="info-item">
                                 <div className="icon-badge-small">📏</div>
                                 <div className="text-content">
-                                    <p className="info-text-bold">50x larger sets</p>
-                                    <p className="info-text-small">No more mixing and matching styles.</p>
+                                    <p className="info-text-bold">Define your guidelines</p>
+                                    <p className="info-text-small">Upload a PDF kit or simply describe your brand's vibe to our AI.</p>
                                 </div>
                             </div>
 
                             <div className="info-item">
                                 <div className="icon-badge-small">🎨</div>
                                 <div className="text-content">
-                                    <p className="info-text-bold">86 unique styles</p>
-                                    <p className="info-text-small">Crafted by professional designers.</p>
-                                </div>
+                                    <p className="info-text-bold">Live Linting Assistant</p>
+                                    <p className="info-text-small">Real-time feedback as you design, just like Grammarly for your layers.</p>
+                                    </div>
                             </div>
 
                             <div className="info-item">
                                 <div className="icon-badge-small">🔗</div>
                                 <div className="text-content">
-                                    <p className="info-text-bold">Unlimited projects</p>
-                                    <p className="info-text-small">Across UI and graphic presentations.</p>
-                                </div>
+                                    <p className="info-text-bold">One-Click Correction</p>
+                                    <p className="info-text-small">Instantly fix off-brand colors, fonts, and spacing with one click.</p>
+                                    </div>
                             </div>
                         </div>
                     )}
