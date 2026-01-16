@@ -155,7 +155,7 @@ const MainLinterUI = ({ issues, setIssues, isScanning, onScan, onFix, setView, b
                             <Suggestions 
                                 assets={suggestedAssets} 
                                 onSelect={handleSelectAsset} 
-                                onWishlist={handleWishlistToggle}
+                                //onWishlist={handleWishlistToggle}
                                 isLoading={isGenerating}
                             />
                         )}
