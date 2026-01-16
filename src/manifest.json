@@ -1,6 +1,6 @@
 {
     "testId": "ed6f0c57-2897-4b0f-b7d0-186592f01f5f",
-    "name": "My Addon",
+    "name": "BrandLint",
     "version": "1.0.0",
     "manifestVersion": 2,
     "requirements": {
@@ -11,6 +11,20 @@
             }
         ]
     },
+    "icons": [
+        {
+            "src": "assets/image.png",
+            "size": 24
+        },
+        {
+            "src": "assets/image.png",
+            "size": 48
+        },
+        {
+            "src": "assets/image.png",
+            "size": 192
+        }
+    ],
     "entryPoints": [
         {
             "type": "panel",
@@ -20,4 +34,3 @@
         }
     ]
 }
-

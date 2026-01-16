@@ -1,5 +1,800 @@
+/* 1. Global Imports & Base Setup */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;700;800&display=swap');
+
+:root {
+    --primary-green: #4CAF50;
+    --primary-green-hover: #45a049;
+    --text-main: #1a1a1a;
+    --text-muted: #777777;
+    --border-light: #efefef;
+}
+
 .container {
-    margin: 24px;
+    margin: 0; 
     display: flex;
     flex-direction: column;
+    width: 100%;
+}
+
+.welcome-container {
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    min-height: 100vh;
+    padding: 20px;
+    background-color: #fafafa;
+    font-family: 'Inter', sans-serif;
+    box-sizing: border-box;
+}
+
+/* 2. The Core Box: Dynamic & Responsive */
+.welcome-box {
+    background: white;
+    width: 100%;
+    max-width: 340px;
+    padding: 24px;
+    border-radius: 12px;
+    box-shadow: 0 8px 30px rgba(0, 0, 0, 0.05);
+    border: 1px solid var(--border-light);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.welcome-box.compact { min-height: 320px; }
+.welcome-box.elongated { min-height: 480px; }
+
+/* 3. Navigation Header */
+.nav-header {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.nav-arrow {
+    background: none;
+    border: none;
+    font-size: 22px;
+    color: #ccc;
+    cursor: pointer;
+    transition: color 0.2s;
+}
+
+.nav-arrow:not(:disabled):hover { color: #000; }
+.nav-arrow:disabled { color: #e0e0e0; cursor: default; }
+
+/* 4. Typography & Content */
+.content-wrapper { flex-grow: 1; }
+
+.brand-title {
+    font-weight: 800;
+    font-size: 24px;
+    text-align: center;
+    line-height: 1.2;
+    color: var(--text-main);
+    margin: 0 0 16px 0;
+}
+
+.brand-title-small {
+    font-weight: 800;
+    font-size: 19px;
+    margin: 0 0 24px 0;
+    line-height: 1.3;
+}
+
+.brand-subtitle {
+    text-align: center;
+    color: var(--text-muted);
+    font-size: 14px;
+    line-height: 1.6;
+    margin-bottom: 24px;
+}
+
+/* 5. Info Items (Slide 2) */
+.info-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 16px;
+    margin-bottom: 20px;
+    text-align: left;
+}
+
+.icon-badge-small, .icon-badge-large { text-align: center; }
+.icon-badge-small { font-size: 22px; min-width: 30px; }
+.icon-badge-large { font-size: 48px; margin-bottom: 16px; }
+
+.info-text-bold {
+    font-weight: 700;
+    font-size: 14px;
+    margin: 0;
+    color: var(--text-main);
+}
+
+.info-text-small {
+    color: var(--text-muted);
+    font-size: 13px;
+    margin: 4px 0 0 0;
+}
+
+/* 6. Action Elements */
+.btn-green-next {
+    background-color: var(--primary-green);
+    color: white;
+    border: none;
+    padding: 16px;
+    border-radius: 8px;
+    width: 100%;
+    font-weight: 700;
+    font-size: 15px;
+    cursor: pointer;
+    transition: transform 0.1s, background 0.2s;
+}
+
+.btn-green-next:hover { background-color: var(--primary-green-hover); }
+.btn-green-next:active { transform: scale(0.98); }
+
+.login-prompt {
+    text-align: center;
+    margin-top: 16px;
+    font-size: 13px;
+    color: #999;
+}
+
+.login-link {
+    color: var(--text-main);
+    font-weight: 700;
+    text-decoration: underline;
+    cursor: pointer;
+}
+
+/* 7. Animations & Mobile Responsiveness */
+.fade-in { animation: fadeIn 0.4s ease-in-out; }
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(5px); }
+    to { opacity: 1; transform: translateY(0); }
+}
+
+@media (max-width: 260px) {
+    .welcome-box { padding: 16px; }
+    .brand-title { font-size: 20px; }
+}
+
+.input-label {
+    display: block;
+    font-weight: 700;
+    font-size: 12px;
+    margin-bottom: 6px;
+    color: var(--text-main);
+    text-align: left;
+}
+
+/* Ensure Spectrum Textfields match your Inter font */
+sp-textfield {
+    --spectrum-textfield-border-radius: 6px;
+    font-family: 'Inter', sans-serif;
+}
+
+.fade-in {
+    animation: authFade 0.3s ease-in-out;
+}
+
+@keyframes authFade {
+    from { opacity: 0; transform: scale(0.98); }
+    to { opacity: 1; transform: scale(1); }
+}
+
+/* Dashboard Container */
+.dashboard-container {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #fff;
+    font-family: 'Inter', sans-serif;
+}
+
+.dashboard-content {
+    flex-grow: 1;
+    padding: 0 20px;
+    overflow-y: auto;
+}
+
+/* Health Card Section */
+.health-card {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    padding: 24px;
+    background: #f8f9fa;
+    border-radius: 16px;
+    margin-top: 10px;
+}
+
+.score-circle {
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    border: 4px solid #000;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: white;
+}
+
+.score-number { font-weight: 800; font-size: 20px; line-height: 1; }
+.score-label { font-size: 10px; font-weight: 700; text-transform: uppercase; color: #888; }
+
+.card-title { font-weight: 800; font-size: 16px; margin: 0 0 4px 0; }
+
+/* Issue Feed */
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+
+.section-title { font-weight: 700; font-size: 14px; text-transform: uppercase; color: #999; letter-spacing: 0.5px; }
+
+.dashboard-issue-item {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #f0f0f0;
+    border-radius: 10px;
+    margin-bottom: 10px;
+    transition: transform 0.2s;
+}
+
+.dashboard-issue-item:hover { transform: translateX(4px); border-color: #ddd; }
+
+.issue-indicator { width: 4px; height: 30px; border-radius: 2px; margin-right: 12px; }
+.font-type { background-color: #0265DC; }
+.color-type { background-color: #FF4B4B; }
+
+.issue-details { flex-grow: 1; text-align: left; }
+.issue-msg { font-size: 13px; margin: 0; }
+.issue-submsg { font-size: 11px; color: #777; margin: 2px 0 0 0; }
+
+.issue-fix-btn {
+    background: #f0f0f0;
+    border: none;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-weight: 700;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+/* Footer Action */
+.dashboard-footer {
+    padding: 20px;
+    border-top: 1px solid #f0f0f0;
+    background: white;
+}
+
+.text-link-btn {
+    background: none;
+    border: none;
+    color: var(--primary-green);
+    font-weight: 700;
+    font-size: 13px;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+/* Header Styling */
+.dashboard-header-fancy {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.brand-logo-text { font-weight: 800; font-size: 18px; margin: 0; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.icon-btn-fancy { background: none; border: none; font-size: 18px; cursor: pointer; }
+
+/* AI Prompt Box */
+.ai-prompt-box {
+    background: #fdfdfd;
+    border: 1px solid #eee;
+    padding: 20px;
+    border-radius: 12px;
+    margin-top: 10px;
+    text-align: left;
+}
+
+.prompt-title { font-weight: 800; font-size: 15px; margin: 0 0 4px 0; }
+.prompt-sub { font-size: 12px; color: #888; margin-bottom: 16px; }
+.input-row { display: flex; gap: 8px; }
+
+/* Fancy Health Card */
+.health-card-fancy {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background: #000;
+    color: white;
+    border-radius: 16px;
+    gap: 16px;
+}
+
+.score-viz {
+    width: 48px;
+    height: 48px;
+    border: 2px solid var(--primary-green);
+    border-radius: 50%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-weight: 800;
+}
+
+.health-meta { flex-grow: 1; text-align: left; }
+.meta-title { margin: 0; font-size: 14px; }
+
+.instant-fix-btn {
+    background: var(--primary-green);
+    color: white;
+    border: none;
+    padding: 8px 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    font-size: 11px;
+    cursor: pointer;
+}
+
+/* Issue List */
+.scroll-area-dashboard { margin-top: 24px; text-align: left; }
+.section-label { font-size: 11px; font-weight: 700; color: #bbb; text-transform: uppercase; margin-bottom: 12px; }
+.issue-card-small {
+    display: flex;
+    align-items: center;
+    padding: 12px;
+    background: #fff;
+    border: 1px solid #f5f5f5;
+    border-radius: 10px;
+    margin-bottom: 8px;
+}
+.type-tag { width: 4px; height: 24px; border-radius: 2px; margin-right: 12px; }
+.font-tag { background: #0265DC; }
+.color-tag { background: #FF4B4B; }
+.main-msg { font-size: 13px; font-weight: 700; margin: 0; }
+.sub-msg { font-size: 11px; color: #777; margin: 0; }
+
+.footer-fixed { padding: 20px; background: white; border-top: 1px solid #f0f0f0; }
+
+.dashboard-header-fancy {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 16px 20px;
+    border-bottom: 1px solid #f0f0f0;
+    background: #fff;
+}
+
+.brand-logo-text { font-weight: 800; font-size: 18px; margin: 0; }
+.header-right { display: flex; align-items: center; gap: 12px; }
+.icon-btn-fancy { background: none; border: none; font-size: 18px; cursor: pointer; }
+.user-avatar { cursor: pointer; }
+
+.grammarly-dashboard {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    background-color: #f9faff; /* Grammarly-style very light blue/grey */
+    font-family: 'Inter', sans-serif;
+}
+
+.grammarly-content {
+    padding: 16px;
+    flex-grow: 1;
+    overflow-y: auto;
+}
+
+/* Assistant Bubble */
+.assistant-bubble {
+    background: white;
+    padding: 16px;
+    border-radius: 12px;
+    box-shadow: 0 4px 12px rgba(0, 107, 255, 0.08); /* Soft blue shadow */
+    margin-bottom: 16px;
+    border: 1px solid #eef0f7;
+}
+
+.bubble-header {
+    text-align: left; /* Aligns with the Grammarly-style left-justified layout */
+    margin-bottom: 16px;
+}
+.ai-icon { font-size: 18px; }
+.assistant-title { margin: 0; font-size: 14px; font-weight: 700; color: #111621; }
+
+.bubble-input-row { display: flex; gap: 8px; }
+.bubble-submit {
+    background: #4CAF50; /* Grammarly green */
+    color: white;
+    border: none;
+    border-radius: 6px;
+    padding: 0 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* Floating Health Card */
+.floating-health {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background: white;
+    padding: 12px 16px;
+    border-radius: 10px;
+    border-left: 4px solid #e1e4e8;
+}
+
+.floating-health.action-needed { border-left-color: #f26b6b; }
+.floating-health.safe { border-left-color: #4CAF50; }
+
+.health-left { display: flex; align-items: center; gap: 12px; }
+.health-circle {
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    background: #f1f3f6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.health-val { font-weight: 800; font-size: 14px; }
+.health-status-label { margin: 0; font-size: 11px; font-weight: 700; color: #6d758d; }
+
+.grammarly-fix-btn {
+    background: #3659e3; /* Deep blue */
+    color: white;
+    border: none;
+    border-radius: 20px;
+    padding: 6px 14px;
+    font-size: 12px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+/* Suggestion Feed */
+.feed-header { font-size: 11px; font-weight: 700; color: #6d758d; text-transform: uppercase; margin-bottom: 12px; text-align: left;}
+
+.suggestion-card {
+    background: white;
+    border-radius: 10px;
+    padding: 16px;
+    margin-bottom: 12px;
+    text-align: left;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.02);
+    border: 1px solid #eef0f7;
+}
+
+.suggestion-header { display: flex; align-items: center; gap: 8px; margin-bottom: 8px; }
+.indicator-dot { width: 8px; height: 8px; border-radius: 50%; }
+.font-dot { background: #3659e3; }
+.color-dot { background: #f26b6b; }
+.suggestion-type { font-weight: 700; font-size: 13px; color: #111621; }
+.suggestion-body { margin: 0 0 12px 0; font-size: 13px; color: #4b5262; line-height: 1.4; }
+
+.suggestion-footer { display: flex; gap: 16px; border-top: 1px solid #f6f7fb; padding-top: 10px; }
+.single-fix-link { background: none; border: none; color: #3659e3; font-weight: 700; cursor: pointer; padding: 0; }
+.dismiss-link { background: none; border: none; color: #6d758d; cursor: pointer; padding: 0; }
+
+/* Footer */
+.grammarly-footer { padding: 16px; background: white; border-top: 1px solid #eef0f7; }
+.scan-trigger-btn {
+    width: 100%;
+    background: #111621;
+    color: white;
+    border: none;
+    padding: 12px;
+    border-radius: 8px;
+    font-weight: 700;
+    cursor: pointer;
+}
+
+.asset-scroll-row {
+    display: flex; /* Flexbox prevents vertical stacking */
+    gap: 12px;
+    overflow-x: auto; /* Enable horizontal scrolling */
+    padding: 4px 4px 12px 4px;
+    scrollbar-width: none; /* Hide for Firefox */
+    -ms-overflow-style: none; /* Hide for IE/Edge */
+}
+
+/* Hide scrollbar for Chrome/Safari/Webkit */
+.asset-scroll-row::-webkit-scrollbar {
+    display: none;
+}
+
+.asset-card {
+    min-width: 150px; /* Force fixed width for scrolling */
+    flex-shrink: 0;
+    background: white;
+    border: 1px solid #eef0f7;
+    border-radius: 12px;
+    padding: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.03);
+    transition: transform 0.2s ease;
+}
+
+.asset-card:hover {
+    transform: translateY(-2px); /* Subtle hover lift */
+}
+
+/* Skeleton Base */
+.skeleton-card {
+    border: 1px solid #f0f2f7 !important;
+    pointer-events: none;
+}
+
+.skeleton-shimmer {
+    background: linear-gradient(90deg, #f0f2f7 25%, #e2e5ec 50%, #f0f2f7 75%);
+    background-size: 200% 100%;
+    animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes shimmer {
+    0% { background-position: -200% 0; }
+    100% { background-position: 200% 0; }
+}
+
+/* Skeleton Elements */
+.skeleton-text {
+    height: 12px;
+    width: 60%;
+    border-radius: 4px;
+    margin-bottom: 12px;
+}
+
+.skeleton-btn-row {
+    display: flex;
+    gap: 8px;
+}
+
+.skeleton-btn-sm { height: 24px; width: 24px; border-radius: 4px; }
+.skeleton-btn-lg { height: 24px; flex-grow: 1; border-radius: 4px; }
+
+/* Improved Asset Card Layout */
+.asset-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.action-group-left {
+    display: flex;
+    gap: 4px;
+}
+
+/* Small Compact Assistant */
+.assistant-bubble-compact {
+    background: white;
+    padding: 8px 12px;
+    border-radius: 20px; /* Pill shape */
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.05);
+    margin-bottom: 20px;
+    border: 1px solid #eef0f7;
+}
+
+.bubble-field-small {
+    flex-grow: 1;
+    --spectrum-textfield-m-background-color: transparent;
+    border: none;
+}
+
+.bubble-submit-small {
+    background: #11a683;
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.2s;
+}
+
+.bubble-submit-small:hover { transform: scale(1.1); }
+
+/* Full Panel Suggestions */
+.full-panel-view {
+    margin-top: 10px;
+    min-height: 300px;
+}
+
+/* Ensure the scroll row is more prominent in full panel mode */
+.asset-scroll-row {
+    display: flex;
+    flex-wrap: wrap; /* Changed from overflow-x to wrap for a grid-like panel */
+    gap: 16px;
+    justify-content: center;
+}
+
+.asset-card {
+    width: 100%; /* Spans full width for a more focused view */
+    max-width: 280px;
+}
+
+/* Header Logo Dot - Grammarly style */
+.logo-dot {
+    width: 8px;
+    height: 8px;
+    background: #3659e3;
+    border-radius: 50%;
+    margin-right: 8px;
+}
+
+/* Settings Container & Dropdown */
+.settings-container {
+    position: relative;
+    display: flex;
+    align-items: center;
+}
+
+.settings-dropdown {
+    position: absolute;
+    top: calc(100% + 14px);
+    right: -4px;
+    width: 220px;
+    background: white;
+    border-radius: 14px;
+    box-shadow: 0 15px 35px rgba(0, 0, 0, 0.12), 0 5px 15px rgba(0, 0, 0, 0.04);
+    border: 1px solid #edf0f5;
+    padding: 8px;
+    z-index: 1000;
+}
+
+/* Profile Summary Section */
+.dropdown-profile-info {
+    padding: 12px 14px;
+    text-align: left;
+}
+
+.profile-label {
+    font-size: 10px;
+    font-weight: 700;
+    text-transform: uppercase;
+    color: #9ea4b0;
+    margin-bottom: 2px;
+}
+
+.profile-email {
+    font-size: 13px;
+    font-weight: 600;
+    color: #111621;
+}
+
+/* List Items */
+.dropdown-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+    padding: 10px 12px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    text-align: left;
+}
+
+.dropdown-item:hover {
+    background: #f6f8fb;
+}
+
+.item-text {
+    display: flex;
+    flex-direction: column;
+}
+
+.item-title {
+    font-size: 13px;
+    font-weight: 700;
+    color: #111621;
+    margin: 0;
+}
+
+.item-subtitle {
+    font-size: 11px;
+    color: #6d758d;
+    margin: 2px 0 0 0;
+}
+
+.dropdown-divider {
+    height: 1px;
+    background: #f1f3f7;
+    margin: 6px 0;
+}
+
+.logout-item:hover {
+    background: #fff5f5;
+}
+
+.logout-item:hover .item-title {
+    color: #f26b6b;
+}
+
+/* Slide Up Animation */
+.slide-up {
+    animation: slideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes slideUp {
+    from {
+        opacity: 0;
+        transform: translateY(8px) scale(0.98);
+    }
+    to {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+    }
+}
+
+
+/* Wishlist Layout */
+.view-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+}
+
+.back-arrow-btn {
+    background: none;
+    border: none;
+    color: #3659e3;
+    font-weight: 700;
+    cursor: pointer;
+    font-size: 14px;
+}
+
+.view-title {
+    font-size: 16px;
+    font-weight: 800;
+    margin: 0;
+}
+
+.remove-wish-btn {
+    background: none;
+    border: none;
+    color: #d1d5db;
+    cursor: pointer;
+    font-size: 16px;
+    transition: color 0.2s;
+}
+
+.remove-wish-btn:hover {
+    color: #f26b6b;
+}
+
+.wishlist-card {
+    border: 1px solid #edf0f5;
+    margin-bottom: 16px;
+}
+
+.empty-state {
+    padding: 40px 20px;
+    text-align: center;
+    color: #9ea4b0;
+}
+
+.empty-icon {
+    font-size: 40px;
+    display: block;
+    margin-bottom: 12px;
+}
+
+.asset-btn.wishlist.active {
+    background: #fff5f5;
+    border-color: #f26b6b;
 }
