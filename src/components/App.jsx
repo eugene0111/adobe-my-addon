@@ -1,4 +1,6 @@
-import React, { useState } from "react";
+import "@spectrum-web-components/theme/express/scale-medium.js";
+import "@spectrum-web-components/theme/express/theme-light.js";
+import { Button } from "@swc-react/button";
 import { Theme } from "@swc-react/theme";
 import React, { useState, useCallback } from "react";
 import { validateDesign, planFixes } from "../services/api.js";
