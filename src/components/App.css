@@ -805,3 +805,135 @@ sp-textfield {
     background: #fff5f5;
     border-color: #f26b6b;
 }
+
+/* Container & Scroll Behavior */
+.asset-suggestions-container {
+    margin: 20px 0;
+    text-align: left;
+}
+
+.asset-scroll-row {
+    display: flex;
+    gap: 16px;
+    overflow-x: auto;
+    padding: 10px 4px 24px 4px;
+    scrollbar-width: none; /* Firefox */
+}
+
+.asset-scroll-row::-webkit-scrollbar { display: none; } /* Chrome/Safari */
+
+/* The Card Design */
+.asset-card {
+    min-width: 180px;
+    flex-shrink: 0;
+    background: #ffffff;
+    border: 1px solid #f0f2f7;
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.03);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+    display: flex;
+    flex-direction: column;
+}
+
+.asset-card:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 12px 24px rgba(54, 89, 227, 0.08);
+    border-color: #e2e5ec;
+}
+
+/* 1. Visual Previews (Colors & Fonts) */
+.asset-preview {
+    height: 60px;
+    background: #f8f9fc;
+    border-radius: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-bottom: 14px;
+    overflow: hidden;
+}
+
+/* Color Swatches */
+.color-swatch-row {
+    display: flex;
+    gap: 6px;
+}
+
+.swatch {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    border: 2px solid white;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+/* Font Preview */
+.font-preview {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--text-main);
+    letter-spacing: -0.5px;
+}
+
+/* 2. Card Content */
+.asset-name {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--text-main);
+    margin: 0 0 12px 0;
+}
+
+/* 3. Action Buttons */
+.asset-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: auto;
+}
+
+.action-group-left {
+    display: flex;
+    gap: 6px;
+}
+
+.asset-btn {
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s ease;
+}
+
+/* Icon Buttons (Wishlist/Edit) */
+.asset-btn.wishlist, .asset-btn.edit {
+    width: 32px;
+    height: 32px;
+    background: #f1f3f9;
+    color: #5c647a;
+    border-radius: 8px;
+    font-size: 14px;
+}
+
+.asset-btn.wishlist.active {
+    background: #fff5f5;
+    color: #f26b6b;
+}
+
+.asset-btn.edit:hover { background: #e8ebf5; color: var(--primary-blue); }
+
+/* Primary Select Button */
+.asset-btn.select {
+    background: var(--primary-green);
+    color: white;
+    padding: 6px 14px;
+    border-radius: 8px;
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.asset-btn.select:hover {
+    filter: brightness(1.05);
+    transform: scale(1.02);
+}
