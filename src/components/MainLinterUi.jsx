@@ -7,7 +7,7 @@ import { StatusLight } from "@swc-react/status-light";
 import { Divider } from "@swc-react/divider";
 import { Textfield } from "@swc-react/textfield";
 
-const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView }) => {
+const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtract, extractedElements }) => {
     // --- State Management ---
     const [viewMode, setViewMode] = useState("dashboard"); // "dashboard" or "wishlist"
     const [prompt, setPrompt] = useState("");
@@ -147,6 +147,62 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView }) => {
                     <button className="scan-trigger-btn" onClick={onScan} disabled={isScanning}>
                         {isScanning ? "Checking Layers..." : "Re-Scan Document"}
                     </button>
+                    {onTestExtract && (
+                        <button 
+                            className="scan-trigger-btn" 
+                            onClick={onTestExtract}
+                            style={{ marginLeft: "8px", backgroundColor: "#0066cc", color: "white" }}
+                        >
+                            Test Extract Elements
+                        </button>
+                    )}
+                    {extractedElements && extractedElements.length > 0 && (
+                        <div style={{ marginTop: "8px", padding: "8px", backgroundColor: "#f0f0f0", borderRadius: "4px", fontSize: "12px" }}>
+                            ✅ Found {extractedElements.length} element(s) - Check console for details
+                        </div>
+                    )}
+                    {/* NEW: Detailed list of extracted elements */}
+                    {extractedElements && extractedElements.length > 0 && (
+                        <div style={{ marginTop: "12px", padding: "8px", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #e0e0e0" }}>
+                            <div style={{ fontWeight: 600, marginBottom: "8px" }}>Extracted Elements Details</div>
+                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "240px", overflowY: "auto" }}>
+                                {extractedElements.map((el, i) => (
+                                    <div key={el.id || i} style={{ border: "1px solid #ddd", borderRadius: "6px", padding: "8px" }}>
+                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
+                                            <div style={{ fontWeight: 600 }}>
+                                                {el.type || "unknown"}
+                                            </div>
+                                            <div style={{ color: "#666" }}>ID: {el.id || "N/A"}</div>
+                                        </div>
+                                        {el.text && (
+                                            <div style={{ marginTop: "4px" }}>
+                                                <span style={{ fontWeight: 500 }}>Text:</span> {el.text}
+                                            </div>
+                                        )}
+                                        {el.textStyle && (
+                                            <div style={{ marginTop: "4px" }}>
+                                                <span style={{ fontWeight: 500 }}>Font:</span> {el.textStyle.fontFamily || "N/A"} &nbsp; | &nbsp;
+                                                <span style={{ fontWeight: 500 }}>Size:</span> {el.textStyle.fontSize ?? "N/A"} &nbsp; | &nbsp;
+                                                <span style={{ fontWeight: 500 }}>Color:</span> {el.textStyle.color || "N/A"}
+                                                {el.textStyle.color && (
+                                                    <span style={{ display: "inline-block", width: "12px", height: "12px", borderRadius: "3px", backgroundColor: el.textStyle.color, marginLeft: "6px", verticalAlign: "middle", border: "1px solid #ccc" }} />
+                                                )}
+                                            </div>
+                                        )}
+                                        <div style={{ marginTop: "4px" }}>
+                                            <span style={{ fontWeight: 500 }}>Position:</span> ({el.position?.x ?? 0}, {el.position?.y ?? 0}) &nbsp; | &nbsp;
+                                            <span style={{ fontWeight: 500 }}>Size:</span> {el.size?.width ?? 0} × {el.size?.height ?? 0}
+                                        </div>
+                                        {el.fill && (
+                                            <div style={{ marginTop: "4px" }}>
+                                                <span style={{ fontWeight: 500 }}>Fill:</span> {typeof el.fill === "string" ? el.fill : JSON.stringify(el.fill)}
+                                            </div>
+                                        )}
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             )}
         </div>

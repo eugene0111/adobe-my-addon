@@ -5,7 +5,7 @@
     "scripts": {
         "clean": "ccweb-add-on-scripts clean",
         "build": "ccweb-add-on-scripts build --use webpack",
-        "start": "ccweb-add-on-scripts start --use webpack",
+        "start": "ccweb-add-on-scripts start --port=8080 --use webpack",
         "package": "ccweb-add-on-scripts package --use webpack"
     },
     "keywords": [
@@ -15,6 +15,7 @@
         "panel"
     ],
     "dependencies": {
+        "@adobe/react-spectrum": "^3.46.0",
         "@swc-react/avatar": "^1.10.0",
         "@swc-react/button": "1.7.0",
         "@swc-react/divider": "^1.10.0",
