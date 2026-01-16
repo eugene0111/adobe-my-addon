@@ -1,4 +1,4 @@
-import React, { useState, useRef } from "react"; // Added useRef
+import React, { useState, useRef, useEffect } from "react";
 import Header from "./Header";
 import IssueList from "./IssueList";
 import Suggestions from "./Suggestions";
@@ -6,12 +6,20 @@ import Wishlist from "./Wishlist";
 import { StatusLight } from "@swc-react/status-light";
 import { Divider } from "@swc-react/divider";
 import { Textfield } from "@swc-react/textfield";
-import { generateBrandProfile } from "../services/api.js";
-import { sendExtractedElements } from "../services/api.js";
+import { generateBrandProfile, sendExtractedElements } from "../services/api.js";
 
-const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtract, extractedElements }) => {
+const MainLinterUI = ({ 
+    issues, 
+    setIssues, // Added setIssues prop to update suggestions feed
+    isScanning, 
+    onScan, 
+    onFix, 
+    setView, 
+    onTestExtract, 
+    extractedElements 
+}) => {
     // --- State Management ---
-    const [viewMode, setViewMode] = useState("dashboard"); // "dashboard" or "wishlist"
+    const [viewMode, setViewMode] = useState("dashboard");
     const [prompt, setPrompt] = useState("");
     const [isGenerating, setIsGenerating] = useState(false);
     const [suggestedAssets, setSuggestedAssets] = useState([]);
@@ -20,28 +28,53 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
     const [sending, setSending] = useState(false);
     const [sendResult, setSendResult] = useState(null);
     
-    // Reference for the hidden file input
     const fileInputRef = useRef(null);
 
+    // Dynamic health score based on backend violation count
     const healthScore = Math.max(0, 100 - (issues.length * 12));
     const isBrandSafe = issues.length === 0;
 
+    // --- Automatic Sync Logic ---
+    // This effect ensures that as soon as onTestExtract finishes, data is sent to the API
+    useEffect(() => {
+        const syncElements = async () => {
+            if (extractedElements && extractedElements.length > 0 && !sending) {
+                await handleSendElements();
+            }
+        };
+        syncElements();
+    }, [extractedElements]);
+
+    /**
+     * Sends extracted document layers to backend and updates the UI suggestions
+     */
     const handleSendElements = async () => {
         if (!extractedElements || extractedElements.length === 0) return;
+        
         setSending(true);
         setSendResult(null);
+        
         try {
+            // 1. Call Express backend
             const resp = await sendExtractedElements(extractedElements);
+            
+            // 2. Map "violations" array from backend to the Suggestions feed
+            if (resp && resp.success && resp.violations) {
+                setIssues(resp.violations); 
+                console.log(`[UI] Received ${resp.violations.length} violations from API`);
+            } else {
+                setIssues([]); // Clear issues if document is clean
+            }
+            
             setSendResult({ ok: true, resp });
-            console.log("[UI] 📤 Sent elements to backend:", resp);
         } catch (err) {
             setSendResult({ ok: false, err });
-            console.warn("[UI] ⚠️ Failed to send elements:", err);
+            console.warn("[UI] ⚠️ Sync failed. Check if backend server is running.", err);
         } finally {
             setSending(false);
         }
     };
-    // --- New Upload Handler ---
+
     const handleUploadClick = () => {
         fileInputRef.current.click();
     };
@@ -54,11 +87,7 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
         setShowSuggestions(true);
 
         try {
-            console.log("Uploading guidelines:", file.name);
-            // Here you would typically send the file to your backend 
-            // example: const response = await uploadGuidelines(file);
-            
-            // Simulating a parsed result from a document
+            // Simulating parsing delay
             setTimeout(() => {
                 const assets = [
                     { id: 'upload-1', name: "Parsed Brand Colors", colors: ["#1A1A1A", "#FFFFFF", "#46C34C"] },
@@ -98,13 +127,7 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
         setIsGenerating(false);
     };
 
-    // (handleSelectAsset, handleWishlistToggle, etc. remain the same)
     const handleSelectAsset = (asset) => {
-        if (asset.isComplete && asset.profile && setBrandProfile) {
-            setBrandProfile(asset.profile);
-            setPrompt("");
-            setShowSuggestions(false);
-        }
         setViewMode("dashboard");
         setTimeout(() => onScan(), 100);
     };
@@ -129,12 +152,9 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
                         <div className="assistant-bubble">
                             <div className="bubble-header">
                                 <h4 className="assistant-title">AI Brand Stylist</h4>
-                                <p className="assistant-description">
-                                    Describe your vibe or upload your guidelines.
-                                </p>
+                                <p className="assistant-description">Describe your vibe or upload your guidelines.</p>
                             </div>
                             
-                            {/* Hidden File Input */}
                             <input 
                                 type="file" 
                                 ref={fileInputRef} 
@@ -145,25 +165,14 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
 
                             <div className="bubble-input-row">
                                 <Textfield 
-                                    
                                     value={prompt}
                                     onInput={(e) => setPrompt(e.target.value)}
                                     className="bubble-field"
+                                    placeholder="e.g. Minimalist tech startup with deep blues"
                                 />
-                                
                                 <div className="action-group">
-                                    <button 
-                                        className="bubble-action-btn upload-btn" 
-                                        onClick={handleUploadClick}
-                                        title="Upload Guidelines"
-                                    >
-                                        📎
-                                    </button>
-                                    <button 
-                                        className="bubble-submit" 
-                                        onClick={handleGenerateBrand}
-                                        disabled={isGenerating || !prompt}
-                                    >
+                                    <button className="bubble-action-btn upload-btn" onClick={handleUploadClick} title="Upload Guidelines">📎</button>
+                                    <button className="bubble-submit" onClick={handleGenerateBrand} disabled={isGenerating || !prompt}>
                                         {isGenerating ? "..." : "Generate"}
                                     </button>
                                 </div>
@@ -171,12 +180,7 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
                         </div>
 
                         {showSuggestions && (
-                            <Suggestions 
-                                assets={suggestedAssets} 
-                                onSelect={handleSelectAsset} 
-                                //onWishlist={handleWishlistToggle}
-                                isLoading={isGenerating}
-                            />
+                            <Suggestions assets={suggestedAssets} onSelect={handleSelectAsset} isLoading={isGenerating} />
                         )}
 
                         <div className={`floating-health ${isBrandSafe ? 'safe' : 'action-needed'}`}>
@@ -208,79 +212,22 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
 
             {viewMode === "dashboard" && (
                 <div className="grammarly-footer">
+                    <button 
+                        className="scan-trigger-btn" 
+                        onClick={onTestExtract}
+                        disabled={isScanning || sending}
+                    >
+                        {isScanning ? "Checking Layers..." : sending ? "Syncing..." : "Re-Scan Document"}
+                    </button>
 
-                    
-
-                    {onTestExtract && (
-                        <button 
-                            className="scan-trigger-btn" 
-                            onClick={onTestExtract}
-                        >
-                            Re-Scan Document
-                        </button>
-                    )}
-
-                    
-                    {extractedElements && extractedElements.length > 0 && (
-                        <button
-                            className="scan-trigger-btn"
-                            onClick={handleSendElements}
-                            disabled={sending}
-                            style={{ marginLeft: "8px", backgroundColor: "#0a7a00", color: "white" }}
-                        >
-                            {sending ? "Sending..." : "Send Elements to Backend"}
-                        </button>
-                    )}
-                    {extractedElements && extractedElements.length > 0 && (
-                        <div style={{ marginTop: "8px", padding: "8px", backgroundColor: "#f0f0f0", borderRadius: "4px", fontSize: "12px" }}>
-                            ✅ Found {extractedElements.length} element(s) - Check console for details
-                        </div>
-                    )}
                     {sendResult && (
-                        <div style={{ marginTop: "8px", padding: "8px", borderRadius: "4px", fontSize: "12px", backgroundColor: sendResult.ok ? "#e8f5e9" : "#fdecea", color: sendResult.ok ? "#1b5e20" : "#b71c1c" }}>
-                            {sendResult.ok ? "✅ Successfully sent elements to backend" : `❌ Failed to send elements: ${sendResult.err?.message || 'Unknown error'}`}
-                        </div>
-                    )}
-                    {/* NEW: Detailed list of extracted elements */}
-                    {extractedElements && extractedElements.length > 0 && (
-                        <div style={{ marginTop: "12px", padding: "8px", backgroundColor: "#ffffff", borderRadius: "6px", border: "1px solid #e0e0e0" }}>
-                            <div style={{ fontWeight: 600, marginBottom: "8px" }}>Extracted Elements Details</div>
-                            <div style={{ display: "flex", flexDirection: "column", gap: "8px", maxHeight: "240px", overflowY: "auto" }}>
-                                {extractedElements.map((el, i) => (
-                                    <div key={el.id || i} style={{ border: "1px solid #ddd", borderRadius: "6px", padding: "8px" }}>
-                                        <div style={{ display: "flex", justifyContent: "space-between" }}>
-                                            <div style={{ fontWeight: 600 }}>
-                                                {el.type || "unknown"}
-                                            </div>
-                                            <div style={{ color: "#666" }}>ID: {el.id || "N/A"}</div>
-                                        </div>
-                                        {el.text && (
-                                            <div style={{ marginTop: "4px" }}>
-                                                <span style={{ fontWeight: 500 }}>Text:</span> {el.text}
-                                            </div>
-                                        )}
-                                        {el.textStyle && (
-                                            <div style={{ marginTop: "4px" }}>
-                                                <span style={{ fontWeight: 500 }}>Font:</span> {el.textStyle.fontFamily || "N/A"} &nbsp; | &nbsp;
-                                                <span style={{ fontWeight: 500 }}>Size:</span> {el.textStyle.fontSize ?? "N/A"} &nbsp; | &nbsp;
-                                                <span style={{ fontWeight: 500 }}>Color:</span> {el.textStyle.color || "N/A"}
-                                                {el.textStyle.color && (
-                                                    <span style={{ display: "inline-block", width: "12px", height: "12px", borderRadius: "3px", backgroundColor: el.textStyle.color, marginLeft: "6px", verticalAlign: "middle", border: "1px solid #ccc" }} />
-                                                )}
-                                            </div>
-                                        )}
-                                        <div style={{ marginTop: "4px" }}>
-                                            <span style={{ fontWeight: 500 }}>Position:</span> ({el.position?.x ?? 0}, {el.position?.y ?? 0}) &nbsp; | &nbsp;
-                                            <span style={{ fontWeight: 500 }}>Size:</span> {el.size?.width ?? 0} × {el.size?.height ?? 0}
-                                        </div>
-                                        {el.fill && (
-                                            <div style={{ marginTop: "4px" }}>
-                                                <span style={{ fontWeight: 500 }}>Fill:</span> {typeof el.fill === "string" ? el.fill : JSON.stringify(el.fill)}
-                                            </div>
-                                        )}
-                                    </div>
-                                ))}
-                            </div>
+                        <div style={{ 
+                            marginTop: "8px", 
+                            fontSize: "11px", 
+                            textAlign: "center", 
+                            color: sendResult.ok ? "#1b5e20" : "#b71c1c" 
+                        }}>
+                            {sendResult.ok ? "✅ Document Synced" : "❌ Sync Failed"}
                         </div>
                     )}
                 </div>
