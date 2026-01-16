@@ -49,6 +49,14 @@ module.exports = {
             {
                 test: /(\.css)$/,
                 use: ["style-loader", "css-loader"]
+            },
+            // Properly placed image rule inside the rules array
+            {
+                test: /\.(png|jpg|jpeg|gif|svg)$/i,
+                type: "asset/resource",
+                generator: {
+                    filename: "assets/[name][ext]"
+                }
             }
         ]
     },

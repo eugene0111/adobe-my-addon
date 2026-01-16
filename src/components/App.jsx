@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { Theme } from "@swc-react/theme";
 // Note: Ensure the file name case matches your project (e.g., ./MainLinterUI)
 import MainLinterUI from "./MainLinterUi"; 
@@ -6,6 +6,8 @@ import Welcome from "./Welcome";
 import { addOnUISdk } from "https://new.express.adobe.com/static/add-on-sdk/sdk.js";
 import { Provider, Content, lightTheme } from "@adobe/react-spectrum";
 import Auth from "./Auth";
+import { MOCK_BRAND_PROFILE } from "../utils/mockData.js";
+import { validateDesign } from "../services/api.js";
 import "./App.css";
 import { documentExtractor } from "../utils/documentExtractor";
 
@@ -27,7 +29,13 @@ const App = ({ addOnUISdk }) => {
             // TODO: Replace with actual scan logic when backend is ready
             await testExtractElements();
         } catch (error) {
-            console.error("Scan failed:", error);
+            console.error("[App] Scan failed with error:", error);
+            console.error("[App] Error stack:", error.stack);
+            setIssues([{
+                type: 'error',
+                message: `Scan failed: ${error.message}`,
+                severity: 'error'
+            }]);
         }
         setIsScanning(false);
     };
@@ -92,8 +100,14 @@ const App = ({ addOnUISdk }) => {
      */
     const fixAllIssues = async () => {
         try {
-            await addOnUISdk.app.runtime.proxy.fixViolations(issues);
-            setIssues([]); 
+            const result = await addOnUISdk.app.runtime.proxy.fixViolations(issues, brandProfile);
+            if (result && result.success) {
+                console.log(`Fixed ${result.fixed} issues, ${result.failed} failed`);
+                // Re-scan to update issues list
+                await scanDocument();
+            } else {
+                console.error("Fixing failed:", result?.error);
+            }
         } catch (error) {
             console.error("Fixing failed:", error);
         }
@@ -121,7 +135,8 @@ const App = ({ addOnUISdk }) => {
                 {/* 3. Main Dashboard View (MainLinterUI) */}
                 {view === "linter" && (
                     <MainLinterUI 
-                        issues={issues} 
+                        issues={issues}
+                        setIssues={setIssues}
                         isScanning={isScanning} 
                         onScan={scanDocument} 
                         onFix={fixAllIssues} 
