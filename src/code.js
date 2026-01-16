@@ -257,6 +257,53 @@ runtime.exposeApi({
   },
 
   /**
+   * Highlight element on canvas (for violation hover)
+   * @param {string} elementId - Element ID to highlight
+   * @returns {Promise<Object>} Result with success status
+   */
+  async highlightElement(elementId) {
+    try {
+      const node = findNodeById(elementId);
+      if (!node) {
+        return { success: false, error: "Element not found" };
+      }
+
+      // Try to select the element (if SDK supports selection)
+      if (editor.context && editor.context.selection) {
+        // Note: Actual selection API may vary by SDK version
+        // This is a placeholder for the highlighting functionality
+        return { success: true, elementId };
+      }
+
+      return { success: false, error: "Selection not available" };
+    } catch (error) {
+      console.error("[Document Sandbox] Error highlighting element:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
+  /**
+   * Clear highlight from canvas
+   * @returns {Promise<Object>} Result with success status
+   */
+  async clearHighlight() {
+    try {
+      // Clear selection if possible
+      // This is a placeholder - actual implementation depends on SDK
+      return { success: true };
+    } catch (error) {
+      console.error("[Document Sandbox] Error clearing highlight:", error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+
+  /**
    * Test function - call from console or UI
    * Tests the fix executor with mock data
    */

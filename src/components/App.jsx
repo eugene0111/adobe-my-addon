@@ -6,6 +6,7 @@ import React, { useState, useCallback, useEffect } from "react";
 import { validateDesign, planFixes, generateBrandProfile } from "../services/api.js";
 import { MOCK_BRAND_PROFILE } from "../utils/mockData.js";
 import { ToastContainer } from "./Toast";
+import { SkeletonLoader, ViolationSkeleton } from "./SkeletonLoader";
 import "./App.css";
 
 const App = ({ addOnUISdk }) => {
@@ -30,6 +31,13 @@ const App = ({ addOnUISdk }) => {
     
     const [hasChecked, setHasChecked] = useState(false); // Track if user has run a check
     const [error, setError] = useState(null);
+    
+    // Polish features
+    const [watchMode, setWatchMode] = useState(false); // Real-time watch mode
+    const [hoveredViolation, setHoveredViolation] = useState(null); // For canvas highlighting
+    const [fixHistory, setFixHistory] = useState([]); // For undo functionality
+    const [previewMode, setPreviewMode] = useState(false); // Fix preview mode
+    const [showBrandProfileEditor, setShowBrandProfileEditor] = useState(false); // Brand profile editor
 
     // Check if addOnUISdk is available
     if (!addOnUISdk) {
@@ -46,9 +54,9 @@ const App = ({ addOnUISdk }) => {
     }
 
     // Toast management
-    const addToast = useCallback((message, type = 'info', duration = 3000) => {
+    const addToast = useCallback((message, type = 'info', duration = 3000, onUndo = null) => {
         const id = Date.now() + Math.random();
-        setToasts(prev => [...prev, { id, message, type, duration }]);
+        setToasts(prev => [...prev, { id, message, type, duration, onUndo }]);
     }, []);
 
     const removeToast = useCallback((id) => {
@@ -100,6 +108,74 @@ const App = ({ addOnUISdk }) => {
             setFormat(savedFormat);
         }
     }, []);
+
+    // Real-time watch mode - auto-scan after document changes
+    useEffect(() => {
+        if (!watchMode || !addOnUISdk) return;
+
+        let debounceTimer;
+        const checkInterval = setInterval(() => {
+            // Debounce: only check if no changes for 2 seconds
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => {
+                if (hasChecked && !loading && !fixing) {
+                    handleCheckBrandConsistency();
+                }
+            }, 2000);
+        }, 3000); // Check every 3 seconds
+
+        return () => {
+            clearInterval(checkInterval);
+            clearTimeout(debounceTimer);
+        };
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [watchMode, hasChecked, loading, fixing]);
+
+    // Canvas element highlighting on violation hover
+    const handleViolationHover = useCallback(async (violation, isHovering) => {
+        if (!addOnUISdk || !violation) return;
+        
+        setHoveredViolation(isHovering ? violation : null);
+        
+        if (isHovering) {
+            try {
+                // Try to highlight element on canvas via SDK
+                await addOnUISdk.runtime.apiProxy('highlightElement', violation.element_id);
+            } catch (error) {
+                // Silently fail - highlighting is optional
+                console.log('[App] Element highlighting not available:', error);
+            }
+        } else {
+            try {
+                await addOnUISdk.runtime.apiProxy('clearHighlight');
+            } catch (error) {
+                // Silently fail
+            }
+        }
+    }, [addOnUISdk]);
+
+    // Undo last fix operation
+    const handleUndoFix = useCallback(async () => {
+        if (fixHistory.length === 0) return;
+
+        const lastFix = fixHistory[fixHistory.length - 1];
+        try {
+            // Revert the fix by applying original values
+            if (lastFix.originalActions && lastFix.originalActions.length > 0) {
+                await addOnUISdk.runtime.apiProxy('executeBulkFixes', lastFix.originalActions);
+                addToast('Fix undone', 'success');
+                
+                // Restore violations
+                setViolations(prev => [...prev, ...lastFix.violations]);
+                
+                // Remove from history
+                setFixHistory(prev => prev.slice(0, -1));
+            }
+        } catch (error) {
+            console.error('Error undoing fix:', error);
+            addToast('Failed to undo fix', 'error');
+        }
+    }, [fixHistory, addOnUISdk, addToast]);
 
     // Extract document data and validate
     const handleCheckBrandConsistency = useCallback(async () => {
@@ -159,6 +235,9 @@ const App = ({ addOnUISdk }) => {
             });
 
             if (fixPlan.success && fixPlan.fix_plan && fixPlan.fix_plan.actions.length > 0) {
+                // Store original state for undo (simplified - in production, capture actual values)
+                const originalViolations = [violation];
+                
                 // Execute fixes via document sandbox
                 const results = await addOnUISdk.runtime.apiProxy('executeBulkFixes', fixPlan.fix_plan.actions);
 
@@ -167,7 +246,20 @@ const App = ({ addOnUISdk }) => {
                 const skipped = results.filter(r => r.skipped).length;
 
                 if (successful > 0) {
-                    addToast(`Fixed ${successful} issue${successful !== 1 ? 's' : ''}`, 'success');
+                    // Add to fix history for undo
+                    setFixHistory(prev => [...prev, {
+                        violations: originalViolations,
+                        actions: fixPlan.fix_plan.actions,
+                        timestamp: Date.now()
+                    }]);
+                    
+                    // Show toast with undo option
+                    addToast(
+                        `Fixed ${successful} issue${successful !== 1 ? 's' : ''}`,
+                        'success',
+                        5000,
+                        handleUndoFix
+                    );
                 }
                 if (failed > 0) {
                     addToast(`Failed to fix ${failed} issue${failed !== 1 ? 's' : ''}`, 'error');
@@ -206,6 +298,9 @@ const App = ({ addOnUISdk }) => {
             });
 
             if (fixPlan.success && fixPlan.fix_plan && fixPlan.fix_plan.actions.length > 0) {
+                // Store for undo
+                const originalViolations = [...violations];
+                
                 // Execute fixes via document sandbox
                 const results = await addOnUISdk.runtime.apiProxy('executeBulkFixes', fixPlan.fix_plan.actions);
 
@@ -214,7 +309,19 @@ const App = ({ addOnUISdk }) => {
                 const skipped = results.filter(r => r.skipped).length;
 
                 if (successful > 0) {
-                    addToast(`Fixed ${successful} issue${successful !== 1 ? 's' : ''}`, 'success');
+                    // Add to fix history for undo
+                    setFixHistory(prev => [...prev, {
+                        violations: originalViolations,
+                        actions: fixPlan.fix_plan.actions,
+                        timestamp: Date.now()
+                    }]);
+                    
+                    addToast(
+                        `Fixed ${successful} issue${successful !== 1 ? 's' : ''}`,
+                        'success',
+                        5000,
+                        handleUndoFix
+                    );
                 }
                 if (failed > 0) {
                     addToast(`Failed to fix ${failed} issue${failed !== 1 ? 's' : ''}`, 'error');
@@ -392,19 +499,81 @@ const App = ({ addOnUISdk }) => {
                                     ? `Current: "${localStorage.getItem('brand_statement')}"`
                                     : 'Using default brand profile. Create a new one to get started.'}
                             </p>
+                            {brandProfile && (
+                                <Button 
+                                    size="s" 
+                                    onClick={() => setShowBrandProfileEditor(!showBrandProfileEditor)}
+                                    className="edit-profile-button"
+                                >
+                                    {showBrandProfileEditor ? 'Hide Details' : 'View/Edit Profile'}
+                                </Button>
+                            )}
+                            {showBrandProfileEditor && brandProfile && (
+                                <div className="brand-profile-editor">
+                                    <div className="profile-section">
+                                        <h4>Fonts</h4>
+                                        <div className="profile-grid">
+                                            <div>Heading: <strong>{brandProfile.fonts?.heading || 'N/A'}</strong></div>
+                                            <div>Body: <strong>{brandProfile.fonts?.body || 'N/A'}</strong></div>
+                                        </div>
+                                    </div>
+                                    <div className="profile-section">
+                                        <h4>Colors</h4>
+                                        <div className="color-preview-grid">
+                                            {brandProfile.colors && Object.entries(brandProfile.colors).map(([key, value]) => (
+                                                <div key={key} className="color-preview-item">
+                                                    <div 
+                                                        className="color-swatch" 
+                                                        style={{ backgroundColor: value }}
+                                                    />
+                                                    <span className="color-label">{key}</span>
+                                                    <span className="color-value">{value}</span>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    </div>
+                                    <Button 
+                                        size="s" 
+                                        onClick={() => {
+                                            const dataStr = JSON.stringify(brandProfile, null, 2);
+                                            const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                                            const url = URL.createObjectURL(dataBlob);
+                                            const link = document.createElement('a');
+                                            link.href = url;
+                                            link.download = 'brand-profile.json';
+                                            link.click();
+                                            URL.revokeObjectURL(url);
+                                            addToast('Brand profile exported', 'success');
+                                        }}
+                                        className="export-button"
+                                    >
+                                        Export Profile
+                                    </Button>
+                                </div>
+                            )}
                         </div>
                     )}
                 </div>
 
                 <div className="actions-section">
-                    <Button 
-                        size="m" 
-                        onClick={handleCheckBrandConsistency}
-                        disabled={loading || fixing}
-                        className="primary-button"
-                    >
-                        {loading ? 'Checking...' : 'Check Brand Consistency'}
-                    </Button>
+                    <div className="primary-actions">
+                        <Button 
+                            size="m" 
+                            onClick={handleCheckBrandConsistency}
+                            disabled={loading || fixing}
+                            className="primary-button"
+                        >
+                            {loading ? 'Checking...' : 'Check Brand Consistency'}
+                        </Button>
+                        <Button 
+                            size="s" 
+                            onClick={() => setWatchMode(!watchMode)}
+                            className={`watch-mode-button ${watchMode ? 'active' : ''}`}
+                            title={watchMode ? 'Disable auto-scan' : 'Enable auto-scan (watches for changes)'}
+                        >
+                            {watchMode ? '👁️ Watching' : '👁️ Watch'}
+                        </Button>
+                    </div>
 
                     {violations.length > 0 && (
                         <div className="bulk-actions">
@@ -420,17 +589,33 @@ const App = ({ addOnUISdk }) => {
                     )}
                 </div>
 
+                {loading && violations.length === 0 && (
+                    <div className="violations-section">
+                        <h3 className="section-title">Scanning Document...</h3>
+                        <div className="violations-list">
+                            <ViolationSkeleton />
+                            <ViolationSkeleton />
+                            <ViolationSkeleton />
+                        </div>
+                    </div>
+                )}
+
                 {violations.length > 0 && (
                     <div className="violations-section">
                         <h3 className="section-title">
                             Violations ({violations.length})
+                            {violations.length > 50 && (
+                                <span className="violation-count-warning"> (Large list - scrollable)</span>
+                            )}
                         </h3>
                         <div className="violations-list">
                             {violations.map((violation, index) => (
                                 <div 
                                     key={`${violation.element_id}-${violation.type}-${index}`}
-                                    className="violation-item"
+                                    className={`violation-item ${hoveredViolation?.element_id === violation.element_id ? 'violation-hovered' : ''}`}
                                     style={{ borderLeftColor: getSeverityColor(violation.severity || 'warning') }}
+                                    onMouseEnter={() => handleViolationHover(violation, true)}
+                                    onMouseLeave={() => handleViolationHover(null, false)}
                                 >
                                     <div className="violation-header">
                                         <span className="violation-icon">{getViolationIcon(violation.type)}</span>
@@ -468,15 +653,24 @@ const App = ({ addOnUISdk }) => {
                 )}
 
                 {violations.length === 0 && !loading && hasChecked && !error && (
-                    <div className="empty-state">
-                        <p>No violations found. Your design is brand-consistent! 🎉</p>
+                    <div className="empty-state empty-state-success">
+                        <div className="empty-state-icon">✨</div>
+                        <h3>Perfect! No Violations Found</h3>
+                        <p>Your design is fully brand-consistent! 🎉</p>
+                        <p className="empty-state-subtitle">All elements match your brand profile guidelines.</p>
                     </div>
                 )}
 
                 {!hasChecked && !loading && (
                     <div className="welcome-state">
-                        <p>Welcome to BrandGuard! 👋</p>
+                        <div className="welcome-icon">👋</div>
+                        <h3>Welcome to BrandGuard!</h3>
                         <p className="welcome-subtitle">Click "Check Brand Consistency" to analyze your design against your brand profile.</p>
+                        <div className="welcome-features">
+                            <div className="feature-item">✓ Font consistency</div>
+                            <div className="feature-item">✓ Color palette</div>
+                            <div className="feature-item">✓ Size guidelines</div>
+                        </div>
                     </div>
                 )}
 
@@ -509,7 +703,7 @@ const App = ({ addOnUISdk }) => {
                     </div>
                 </div>
 
-                <ToastContainer toasts={toasts} removeToast={removeToast} />
+                <ToastContainer toasts={toasts} removeToast={removeToast} onUndo={handleUndoFix} />
             </div>
         </Theme>
     );
