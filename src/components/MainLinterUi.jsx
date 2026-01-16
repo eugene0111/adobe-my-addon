@@ -208,18 +208,19 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
 
             {viewMode === "dashboard" && (
                 <div className="grammarly-footer">
-                    <button className="scan-trigger-btn" onClick={onScan} disabled={isScanning}>
-                        {isScanning ? "Checking Layers..." : "Re-Scan Document"}
-                    </button>
+
+                    
+
                     {onTestExtract && (
                         <button 
                             className="scan-trigger-btn" 
                             onClick={onTestExtract}
-                            style={{ marginLeft: "8px", backgroundColor: "#0066cc", color: "white" }}
                         >
-                            Test Extract Elements
+                            Re-Scan Document
                         </button>
                     )}
+
+                    
                     {extractedElements && extractedElements.length > 0 && (
                         <button
                             className="scan-trigger-btn"
