@@ -27,8 +27,20 @@ async function apiRequest(endpoint, options = {}) {
       background: "#FFFFFF",
       text: "#1F2937",
     },
+    fonts: {
+  heading: "Inter",
+  body: "Inter",
+
+  h1_size: 32,
+  h2_size: 24,
+  h3_size: 20,
+  body_size: 16,
+  caption_size: 12,
+},
     borders: {
       radius: 18,
+      width: 1,
+      style: "solid",
     },
   };
   const url = `${BACKEND_URL}${endpoint}`;
@@ -85,7 +97,7 @@ async function apiRequest(endpoint, options = {}) {
     }
 
     console.log(`[API] Request successful: ${url}`);
-console.log('[API] Response data:', data);
+    console.log("[API] Response data:", data);
     return data;
   } catch (error) {
     if (error instanceof ApiError) {
@@ -110,13 +122,42 @@ console.log('[API] Response data:', data);
   }
 }
 
+const brandProfile = {
+  spacing: {
+    padding: 24,
+    margin: 16,
+    gap: 12,
+  },
+  colors: {
+    primary: "#000000",
+    secondary: "#00f0a0",
+    background: "#FFFFFF",
+    text: "#1F2937",
+  },
+  fonts: {
+  heading: "Inter",
+  body: "Inter",
+
+  h1_size: 32,
+  h2_size: 24,
+  h3_size: 20,
+  body_size: 16,
+  caption_size: 12,
+},
+    borders: {
+      radius: 18,
+      width: 1,
+      style: "solid",
+    },
+};
+
 /**
  * Validate design against brand profile
  * @param {Object} brandProfile - Brand profile object
  * @param {Object} documentData - Extracted document data
  * @returns {Promise<Object>} Validation results with violations
  */
-export async function validateDesign(brandProfile, documentData) {
+export async function validateDesign(documentData) {
   return apiRequest("/brand/validate", {
     method: "POST",
     body: {
@@ -211,14 +252,13 @@ export async function generateBrandProfile(
 
 // NEW: Send extracted elements to backend
 export async function sendExtractedElements(elements) {
-  return apiRequest("/document/elements", {
+  return apiRequest("/brand/validate", {
     method: "POST",
-    headers: {
-      "Content-Type": "application/json",
+    body: {
+      document_data: {
+        elements,
+      },
     },
-    body: JSON.stringify({
-      elements,
-    }),
   });
 }
 
