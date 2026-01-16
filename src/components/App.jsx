@@ -10,6 +10,7 @@ import { MOCK_BRAND_PROFILE } from "../utils/mockData.js";
 import { validateDesign } from "../services/api.js";
 import "./App.css";
 import { documentExtractor } from "../utils/documentExtractor";
+import { sendExtractedElements } from "../services/api.js";
 
 const App = ({ addOnUISdk }) => {
   const [user, setUser] = useState(null);
@@ -76,6 +77,13 @@ const App = ({ addOnUISdk }) => {
                 });
                 
                 setExtractedElements(documentData.elements);
+                // Optionally send to backend right after extraction
+                try {
+                    const resp = await sendExtractedElements(documentData.elements);
+                    console.log("[TEST] 📤 Sent elements to backend:", resp);
+                } catch (sendErr) {
+                    console.warn("[TEST] ⚠️ Failed to send elements to backend:", sendErr);
+                }
                 console.log("\n[TEST] ✅ Elements stored in state. Check UI below.");
             } else {
                 console.warn("[TEST] ⚠️ No elements found!");

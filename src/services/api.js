@@ -174,4 +174,15 @@ export async function generateBrandProfile(brandStatement, format = 'instagram_p
   });
 }
 
+// NEW: Send extracted elements to backend
+export async function sendExtractedElements(elements) {
+  // Only send the array of element objects
+  return apiRequest('/document/elements', {
+    method: 'POST',
+    body: {
+      elements,
+    },
+  });
+}
+
 export { ApiError };

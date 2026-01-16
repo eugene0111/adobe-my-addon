@@ -5,7 +5,7 @@
     "scripts": {
         "clean": "ccweb-add-on-scripts clean",
         "build": "ccweb-add-on-scripts build --use webpack",
-        "start": "ccweb-add-on-scripts start --port=8080 --use webpack",
+        "start": "ccweb-add-on-scripts start --port=5241 --use webpack",
         "package": "ccweb-add-on-scripts package --use webpack"
     },
     "keywords": [

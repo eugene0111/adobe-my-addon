@@ -7,6 +7,7 @@ import { StatusLight } from "@swc-react/status-light";
 import { Divider } from "@swc-react/divider";
 import { Textfield } from "@swc-react/textfield";
 import { generateBrandProfile } from "../services/api.js";
+import { sendExtractedElements } from "../services/api.js";
 
 const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtract, extractedElements }) => {
     // --- State Management ---
@@ -16,6 +17,8 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
     const [suggestedAssets, setSuggestedAssets] = useState([]);
     const [showSuggestions, setShowSuggestions] = useState(false);
     const [wishlistedItems, setWishlistedItems] = useState([]);
+    const [sending, setSending] = useState(false);
+    const [sendResult, setSendResult] = useState(null);
     
     // Reference for the hidden file input
     const fileInputRef = useRef(null);
@@ -23,6 +26,21 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
     const healthScore = Math.max(0, 100 - (issues.length * 12));
     const isBrandSafe = issues.length === 0;
 
+    const handleSendElements = async () => {
+        if (!extractedElements || extractedElements.length === 0) return;
+        setSending(true);
+        setSendResult(null);
+        try {
+            const resp = await sendExtractedElements(extractedElements);
+            setSendResult({ ok: true, resp });
+            console.log("[UI] 📤 Sent elements to backend:", resp);
+        } catch (err) {
+            setSendResult({ ok: false, err });
+            console.warn("[UI] ⚠️ Failed to send elements:", err);
+        } finally {
+            setSending(false);
+        }
+    };
     // --- New Upload Handler ---
     const handleUploadClick = () => {
         fileInputRef.current.click();
@@ -203,8 +221,23 @@ const MainLinterUI = ({ issues, isScanning, onScan, onFix, setView, onTestExtrac
                         </button>
                     )}
                     {extractedElements && extractedElements.length > 0 && (
+                        <button
+                            className="scan-trigger-btn"
+                            onClick={handleSendElements}
+                            disabled={sending}
+                            style={{ marginLeft: "8px", backgroundColor: "#0a7a00", color: "white" }}
+                        >
+                            {sending ? "Sending..." : "Send Elements to Backend"}
+                        </button>
+                    )}
+                    {extractedElements && extractedElements.length > 0 && (
                         <div style={{ marginTop: "8px", padding: "8px", backgroundColor: "#f0f0f0", borderRadius: "4px", fontSize: "12px" }}>
                             ✅ Found {extractedElements.length} element(s) - Check console for details
+                        </div>
+                    )}
+                    {sendResult && (
+                        <div style={{ marginTop: "8px", padding: "8px", borderRadius: "4px", fontSize: "12px", backgroundColor: sendResult.ok ? "#e8f5e9" : "#fdecea", color: sendResult.ok ? "#1b5e20" : "#b71c1c" }}>
+                            {sendResult.ok ? "✅ Successfully sent elements to backend" : `❌ Failed to send elements: ${sendResult.err?.message || 'Unknown error'}`}
                         </div>
                     )}
                     {/* NEW: Detailed list of extracted elements */}
