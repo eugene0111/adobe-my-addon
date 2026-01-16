@@ -7,7 +7,10 @@ const isEnvProduction = process.env.NODE_ENV === "production";
 module.exports = {
     mode: isEnvProduction ? "production" : "development",
     devtool: isEnvProduction ? "source-map" : "eval-source-map",
-    entry: "./src/index.jsx",
+    entry: {
+        index: "./src/index.jsx",
+        code: "./src/code.js"  // Document sandbox entry point
+    },
     experiments: {
         outputModule: true
     },
@@ -15,7 +18,7 @@ module.exports = {
         pathinfo: !isEnvProduction,
         path: path.resolve(__dirname, "dist"),
         module: true,
-        filename: "index.js"
+        filename: "[name].js"
     },
     externalsType: "module",
     externalsPresets: { web: true },
@@ -25,7 +28,10 @@ module.exports = {
             scriptLoading: "module"
         }),
         new CopyWebpackPlugin({
-            patterns: [{ from: "src/*.json", to: "[name][ext]" }]
+            patterns: [
+                { from: "src/*.json", to: "[name][ext]" },
+                { from: "src/assets", to: "assets", noErrorOnMissing: true }
+            ]
         })
     ],
     module: {
