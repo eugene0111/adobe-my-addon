@@ -50,9 +50,12 @@ const Textfield = ({ value, onInput, className, placeholder }) => (
 const MainLinterUI = ({
   issues,
   setIssues,
+  isScanning,
+  onScan,
   onFix,
   setView,
   onTestExtract,
+  extractedElements,
   addOnUISdk,
 }) => {
   // --- State Management ---
@@ -62,9 +65,8 @@ const MainLinterUI = ({
   const [suggestedAssets, setSuggestedAssets] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [wishlistedItems, setWishlistedItems] = useState([]);
-  
-  // Local processing state (replaces App.jsx scanning state)
-  const [isProcessing, setIsProcessing] = useState(false);
+  const [sending, setSending] = useState(false);
+  const [sendResult, setSendResult] = useState(null);
   
   // AI Brand Profile State
   const [activeBrandProfile, setActiveBrandProfile] = useState(null);
@@ -77,9 +79,11 @@ const MainLinterUI = ({
   const isBrandSafe = issues.length === 0;
 
   // --- 1. CORE VALIDATION LOGIC ---
+  // This ensures we validate against the AI profile if one exists
   const performValidation = async (elements) => {
     if (activeBrandProfile) {
       try {
+        console.log('[MainLinterUI] Validating against Active AI Profile:', activeBrandProfile.brand_name);
         const response = await fetch(`${BACKEND_URL}/brand/validate`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -94,124 +98,78 @@ const MainLinterUI = ({
         return { success: false, error: error.message };
       }
     } else {
+      // Fallback to default/hardcoded profile in API service
       return sendExtractedElements(elements);
     }
   };
 
-  // --- 2. DATA PROCESSING HANDLER ---
-  const processDocumentUpdate = async (elements) => {
-    // Prevent overlapping checks
-    if (isProcessing || !elements) return;
+  // --- 2. SYNC LOGIC ---
+  // When App.jsx extracts elements (after you click the button), this picks them up
+  useEffect(() => {
+    const syncElements = async () => {
+      if (extractedElements && extractedElements.length > 0 && !sending) {
+        await handleSendElements();
+      }
+    };
+    syncElements();
+  }, [extractedElements]);
 
-    setIsProcessing(true);
+  // --- Handlers ---
+
+  const handleSendElements = async () => {
+    if (!extractedElements || extractedElements.length === 0) return;
+    setSending(true);
+    setSendResult(null);
+
     try {
-      // Validate the data received from Sandbox
-      const resp = await performValidation(elements);
+      const resp = await performValidation(extractedElements);
       
       if (resp.success && resp.violations) {
-        // Map violations for UI
-        const processedIssues = resp.violations.map(v => ({
-          ...v,
-          humanLocation: v.humanLocation || 'canvas' 
-        }));
-        setIssues(processedIssues);
+        const enhancedViolations = resp.violations.map((violation) => {
+             // Add human readable location fallback
+             return {
+                ...violation,
+                humanLocation: violation.humanLocation || 'canvas'
+             };
+        });
+        setIssues(enhancedViolations);
       } else {
         setIssues([]);
       }
+      setSendResult({ ok: true, resp });
     } catch (err) {
-      console.warn('Live validation error:', err);
+      setSendResult({ ok: false, err });
+      console.warn('Sync failed.', err);
     } finally {
-      setIsProcessing(false);
+      setSending(false);
     }
   };
 
-  // --- 3. REAL-TIME EVENT LISTENER (PUSH ARCHITECTURE) ---
-  useEffect(() => {
-    let cleanupListener = () => {};
-
-    const initRealtimeConnection = async () => {
-      if (!addOnUISdk?.instance?.runtime) return;
-
-      const { runtime } = addOnUISdk.instance;
-      
-      try {
-        // A. Get Sandbox Proxy
-        const sandboxApi = await runtime.apiProxy("documentSandbox");
-        
-        // B. Define the Event Handler
-        const handleDocumentUpdated = async (data) => {
-            // Support both direct array or object wrapper
-            const elements = data.elements || data;
-            // console.log("[UI] Received update:", elements?.length);
-            await processDocumentUpdate(elements);
-        };
-
-        // C. Subscribe to Sandbox Events
-        // We look for 'DOCUMENT_UPDATED' emitted by our new code.js
-        if (runtime.on) {
-            runtime.on("DOCUMENT_UPDATED", handleDocumentUpdated);
-            cleanupListener = () => runtime.off("DOCUMENT_UPDATED", handleDocumentUpdated);
-        }
-
-        // D. Start the Watcher in Sandbox
-        // This tells code.js to start its internal loop/listeners
-        if (sandboxApi.startRealtimeScan) {
-            await sandboxApi.startRealtimeScan();
-            console.log("[UI] Real-time watcher started.");
-        } else {
-            console.warn("[UI] startRealtimeScan not found in sandbox API. Check code.js.");
-        }
-
-      } catch (err) {
-        console.error("[UI] Failed to init real-time connection:", err);
-      }
-    };
-
-    initRealtimeConnection();
-
-    return () => {
-      cleanupListener();
-    };
-  }, [addOnUISdk]); 
-
-  // --- Handlers ---
   const handleFixSingleIssue = async (issue) => {
     try {
-      // For fixing, we might need fresh data or just trust the issue ID
-      // We'll proceed with the existing action logic
-      const { runtime } = addOnUISdk.instance;
-      if (!runtime) return;
+      // Re-validate to get the latest fix actions
+      const validateResponse = await performValidation(extractedElements);
       
-      const sandboxApi = await runtime.apiProxy("documentSandbox");
-      
-      // Need to find the action again. In a real app, you might store actions with issues.
-      // Retriggering validation to find the specific action for this issue ID:
-      const validation = await performValidation(issues.map(i => ({ id: i.element_id }))); 
-      // Note: The above is a simplification. Ideally, pass the full extracted elements if stored.
-      // For now, let's assume we can re-fetch or use a stored 'extractedElements' state if we lifted it back here.
-      // But to keep it simple and robust:
-      
-      // Better approach: Just tell sandbox to fix this ID using generic logic if available,
-      // OR re-scan completely. 
-      // Let's rely on re-scanning via the fix button triggers in IssueList usually calling 'onFix'.
-      
-      // If we must fix a single issue here:
-      if (sandboxApi.executeFix) {
-          // Construct a basic action or fetch from backend
-          // Falling back to a "Fix All" strategy for the single element if specific action missing
-          // But likely you have the action data. 
-          // Assuming 'performValidation' was just called in processDocumentUpdate, we don't have the actions stored.
-          // Let's do a quick fetch:
-          const latestData = await sandboxApi.extractDocumentData();
-          const resp = await performValidation(latestData.elements || latestData);
-          
-          if (resp.fixes?.actions) {
-             const action = resp.fixes.actions.find(a => (a.element_id || a.elementid) === (issue.element_id || issue.elementid));
-             if (action) {
-                 await sandboxApi.executeFix(action);
-                 // The sandbox will emit DOCUMENT_UPDATED after fix, updating the UI automatically.
-             }
+      if (!validateResponse.success || !validateResponse.fixes?.actions) return;
+  
+      const relevantAction = validateResponse.fixes.actions.find(a => 
+        (a.element_id || a.elementid) === (issue.element_id || issue.elementid)
+      );
+  
+      if (!relevantAction) return;
+  
+      const runtime = addOnUISdk?.instance;
+      if (runtime?.apiProxy) {
+        const sandboxProxy = await runtime.apiProxy.documentSandbox;
+        if (sandboxProxy?.executeFix) {
+          const res = await sandboxProxy.executeFix(relevantAction);
+          if (res?.success) {
+            // Optimistic Update: Remove from list immediately
+            setIssues(prev => prev.filter(i => 
+              (i.element_id || i.elementid) !== (issue.element_id || issue.elementid)
+            ));
           }
+        }
       }
     } catch (error) {
       console.error('Fix error:', error);
@@ -248,9 +206,11 @@ const MainLinterUI = ({
         setActiveBrandProfile(generatedFullProfile);
     }
     setViewMode('dashboard');
-    // We don't need to manually scan here; the real-time connection is active.
-    // But we can force a check if we want immediate feedback:
-    // onTestExtract && onTestExtract(); 
+    // We switched profile, user should probably re-scan manually
+  };
+
+  const handleUploadClick = () => {
+    fileInputRef.current?.click();
   };
 
   // --- Render ---
@@ -287,7 +247,7 @@ const MainLinterUI = ({
               />
             </div>
             <div className="action-group">
-              <button className="bubble-action-btn upload-btn" onClick={() => fileInputRef.current?.click()}>
+              <button className="bubble-action-btn upload-btn" onClick={handleUploadClick}>
                 Upload Guidelines
               </button>
               <button
@@ -340,43 +300,21 @@ const MainLinterUI = ({
         </div>
       )}
 
-      {/* FOOTER: LIVE STATUS BADGE */}
-      <div className="grammarly-footer" style={{ 
-          marginTop: 'auto', 
-          padding: '10px', 
-          borderTop: '1px solid #eee',
-          display: 'flex', 
-          justifyContent: 'center', 
-          background: '#f9f9f9',
-          minHeight: '40px'
-      }}>
-        <div style={{ 
-            fontSize: '11px', 
-            fontWeight: '600',
-            color: isProcessing ? '#e65100' : '#2e7d32', 
-            display: 'flex', 
-            alignItems: 'center', 
-            gap: '8px' 
-        }}>
-            <div style={{ 
-                width: '8px', 
-                height: '8px', 
-                borderRadius: '50%', 
-                backgroundColor: isProcessing ? '#ff9800' : '#2e7d32',
-                boxShadow: isProcessing ? '0 0 4px #ff9800' : '0 0 0 2px rgba(46, 125, 50, 0.2)',
-                animation: 'pulse 1.5s infinite'
-            }} />
-            {isProcessing ? 'ANALYZING...' : 'LIVE MONITORING ACTIVE'}
-        </div>
+      {/* FOOTER: MANUAL RE-SCAN BUTTON */}
+      <div className="grammarly-footer">
+        <button
+          className="scan-trigger-btn"
+          onClick={onTestExtract}
+          disabled={isScanning || sending}
+        >
+          {isScanning ? 'Checking Layers...' : sending ? 'Syncing...' : 'Re-Scan Document'}
+        </button>
+        {sendResult && (
+          <div style={{ marginTop: '8px', fontSize: '11px', textAlign: 'center', color: sendResult.ok ? '#1b5e20' : '#b71c1c' }}>
+            {sendResult.ok ? 'Document Synced' : 'Sync Failed'}
+          </div>
+        )}
       </div>
-      
-      <style>{`
-        @keyframes pulse {
-            0% { opacity: 1; transform: scale(1); }
-            50% { opacity: 0.6; transform: scale(1.1); }
-            100% { opacity: 1; transform: scale(1); }
-        }
-      `}</style>
     </div>
   );
 };
