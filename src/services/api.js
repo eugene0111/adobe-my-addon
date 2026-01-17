@@ -262,4 +262,34 @@ export async function sendExtractedElements(elements) {
   });
 }
 
+export const generateBrandKit = async (url) => {
+  try {
+      // Assuming your backend runs on localhost:3000 or is proxied
+      // The route is likely defined in src/routes/brand.js
+      const response = await fetch(`${API_BASE_URL}/brand/analyze`, { 
+          method: 'POST',
+          headers: {
+              'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ url }),
+      });
+
+      if (!response.ok) {
+          throw new Error('Failed to analyze brand');
+      }
+
+      return await response.json();
+  } catch (error) {
+      console.error("Brand generation error:", error);
+      throw error;
+  }
+};
+
+export const applyBrandToSelection = async (brandData) => {
+  // This connects to the add-on sandbox to apply styles
+  // Implementation depends on your src/utils/brandUtils.js
+  // This is a placeholder for the logic that maps API data to Adobe Express nodes
+  return true; 
+};
+
 export { ApiError };

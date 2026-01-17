@@ -21,8 +21,8 @@ const Header = ({ onSettingsClick, onLogout, onWishlistClick, onPreferencesClick
     return (
         <header className="dashboard-header-fancy">
             <div className="header-left">
-                
-                <h2 className="brand-logo-text">BrandLint</h2>
+                <img src="/images/image.png" alt="BrandLint Logo" className="brand-logo" />
+                <h2 className="t">BrandLint</h2>
             </div>
             
             <div className="header-right">
