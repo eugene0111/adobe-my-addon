@@ -202,6 +202,7 @@ const App = ({ addOnUISdk }) => {
             setView={setView}
             onTestExtract={testExtractElements}
             extractedElements={extractedElements}
+            addOnUISdk={addOnUISdk}
           />
         )}
       </div>
